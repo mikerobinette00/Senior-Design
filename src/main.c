@@ -1,19 +1,133 @@
 /**
   ******************************************************************************
   * @file    main.c
-  * @author  Ac6
+  * @author  Michael Robinette and Raymond Azar
   * @version V1.0
-  * @date    01-December-2013
-  * @brief   Default main function.
+  * @date    2/8/2024
+  * @brief   Senior Design EMT Code
+  * @brief   Purdue ECE 362 Class Notes and Lab Manuals used as Resource
   ******************************************************************************
 */
-//Test
 
 #include "stm32f0xx.h"
-			
+#include <stdint.h>
 
-int main(void)
-{
+void initb();
+void initc();
+void setn(int32_t pin_num, int32_t val);
+int32_t readpin(int32_t pin_num);
+void buttons(void);
+void keypad(void);
 
-	for(;;);
+void mysleep(void) {
+    for(int n = 0; n < 1000; n++);
+}
+
+int main(void) {
+    // Uncomment when most things are working
+    //autotest();
+
+    initb();
+    initc();
+
+    // uncomment one of the loops, below, when ready
+//     while(1) {
+//       buttons();
+//     }
+
+     while(1) {
+       keypad();
+     }
+
+    for(;;);
+}
+
+/**
+ * @brief Init GPIO port B
+ *        Pin 0: input
+ *        Pin 4: input
+ *        Pin 8-11: output
+ *
+ */
+void initb() {
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+
+    GPIOB->MODER &= ~0x00ff0000;
+    GPIOB->MODER |= 0x00550000; // output pb11-pb8
+
+    GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
+}
+
+/**
+ * @brief Init GPIO port C
+ *        Pin 0-3: inputs with internal pull down resistors
+ *        Pin 4-7: outputs
+ *
+ */
+void initc() {
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+
+    GPIOC->MODER &= ~0x0000ffff; //reset ports 0-7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
+    GPIOC->MODER |= 0x00005500; // output pc7-pc4
+
+    GPIOC->PUPDR &= ~0x000000ff;
+    GPIOC->PUPDR |= 0x000000AA;
+}
+
+/**
+ * @brief Set GPIO port B pin to some value
+ *
+ * @param pin_num: Pin number in GPIO B
+ * @param val    : Pin value, if 0 then the
+ *                 pin is set low, else set high
+ */
+void setn(int32_t pin_num, int32_t val) {
+
+    if(val != 0) {
+        GPIOB->ODR |= 0x0001 << pin_num;
+    }
+    else {
+        GPIOB->ODR &= ~(0x1 << pin_num);
+    }
+}
+
+/**
+ * @brief Read GPIO port B pin values
+ *
+ * @param pin_num   : Pin number in GPIO B to be read
+ * @return int32_t  : 1: the pin is high; 0: the pin is low
+ */
+int32_t readpin(int32_t pin_num) {
+    int32_t output = GPIOB->IDR & (0x1 << pin_num);
+
+    return output >> pin_num;
+}
+
+/**
+ * @brief Control LEDs with buttons
+ *        Use PB0 value for PB8
+ *        Use PB4 value for PB9
+ *
+ */
+void buttons(void) {
+    // Use the implemented subroutines
+    // Read button input at PB0
+    // Put the PB0 value as output for PB8
+    // Read button input at PB4
+    // Put the PB4 value as output for PB9hel
+    setn(8, readpin(0));
+    setn(9, readpin(4));
+}
+
+/**
+ * @brief Control LEDs with keypad
+ *
+ */
+void keypad(void) {
+    for(int i = 1; i <= 4; i++) {
+        GPIOC->ODR &= 0x0000;
+        GPIOC->ODR |= 0x0001 << (i+3);
+        mysleep();
+        setn(i+7, GPIOC->IDR & 0x1 << (i-1));
+    }
 }
