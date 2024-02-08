@@ -18,6 +18,7 @@ void setn(int32_t pin_num, int32_t val);
 int32_t readpin(int32_t pin_num);
 void buttons(void);
 void keypad(void);
+void setup_tim2(void);
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
@@ -35,11 +36,18 @@ int main(void) {
 //       buttons();
 //     }
 
-     while(1) {
-       keypad();
-     }
+     //while(1) {
+       //keypad();
+     //}
+     //setup_tim2();
 
-    for(;;);
+	#define TEST_TIMER2
+	#ifdef TEST_TIMER2
+		setup_tim2();
+		for(;;) { }
+	#endif
+
+    //for(;;);
 }
 
 /**
@@ -139,7 +147,7 @@ void setup_tim2(void) {
 	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN; //Initialize pins
 	GPIOA -> MODER &= ~0x000000FC;
 	GPIOA -> MODER |= 0x000000A8;
-	GPIOA -> AFR[0] &= ~0xFF000000
+	GPIOA -> AFR[0] &= ~0xFF000000;
 	GPIOA -> AFR[1] &= ~0x000000FF;
 	//Setting the clock down
 	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
@@ -148,9 +156,20 @@ void setup_tim2(void) {
 
 	TIM2 -> CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
 	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR1_OC3M_2 | TIM_CCMR1_OC3M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR1_OC4M_2 | TIM_CCMR1_OC4M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
 
 	TIM2 -> CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+	// TODO: Enable TIM3 counter
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	TIM2->CCR1 = 800;
+	TIM2->CCR2 = 400;
+	TIM2->CCR3 = 200;
+	TIM2->CCR4 = 100;
+
 }
+
+
 
