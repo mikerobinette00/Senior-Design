@@ -131,3 +131,26 @@ void keypad(void) {
         setn(i+7, GPIOC->IDR & 0x1 << (i-1));
     }
 }
+
+void setup_tim2(void) {
+	//Setting up timer
+	//Currently using TIM2 because pins PA1 - PA3
+
+	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN; //Initialize pins
+	GPIOA -> MODER &= ~0x000000FC;
+	GPIOA -> MODER |= 0x000000A8;
+	GPIOA -> AFR[0] &= ~0xFF000000
+	GPIOA -> AFR[1] &= ~0x000000FF;
+	//Setting the clock down
+	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
+	TIM2 -> PSC = 47999; //Clock is now at 1 MHz
+	TIM2 -> ARR = 999; //Sets clock to 1 hertz
+
+	TIM2 -> CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
+	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR1_OC3M_2 | TIM_CCMR1_OC3M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR1_OC4M_2 | TIM_CCMR1_OC4M_1;
+
+	TIM2 -> CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+}
+
