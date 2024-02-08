@@ -12,6 +12,8 @@
 #include "stm32f0xx.h"
 #include <stdint.h>
 
+//keymap = "DCBA096308520741";
+
 void initb();
 void initc();
 void setn(int32_t pin_num, int32_t val);
@@ -19,6 +21,9 @@ int32_t readpin(int32_t pin_num);
 void buttons(void);
 void keypad(void);
 void setup_tim2(void);
+
+//char* keymap_arr = &keymap;
+//extern uint8_t col;
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
@@ -93,11 +98,14 @@ void setn(int32_t pin_num, int32_t val) {
 
     if(val != 0) {
         GPIOB->ODR |= 0x0001 << pin_num;
+    	//GPIOB->ODR |= keymap_arr[3];
     }
     else {
         GPIOB->ODR &= ~(0x1 << pin_num);
     }
 }
+
+
 
 /**
  * @brief Read GPIO port B pin values
@@ -138,7 +146,10 @@ void keypad(void) {
         mysleep();
         setn(i+7, GPIOC->IDR & 0x1 << (i-1));
     }
+
+    //(4-i)
 }
+
 
 void setup_tim2(void) {
 	//Setting up timer
@@ -171,5 +182,30 @@ void setup_tim2(void) {
 
 }
 
+
+
+/**
+ * @brief Convert the pressed key to character
+ *        Use the rows value and the current `col`
+ *        being scanning to compute an offset into
+ *        the character map array
+ *
+ * @param rows
+ * @return char
+ */
+//char rows_to_key(int rows) {
+//    if(rows == 0x8) {
+//        return keymap_arr[((col & 0b11)*4 + 3)];
+//    }
+//    else if(rows == 0x4) {
+//        return keymap_arr[((col & 0b11)*4 + 2)];
+//    }
+//    else if(rows == 0x2) {
+//        return keymap_arr[((col & 0b11)*4 + 1)];
+//    }
+//    else if(rows == 0x1) {
+//        return keymap_arr[((col & 0b11)*4 + 0)];
+//    }
+//}
 
 
