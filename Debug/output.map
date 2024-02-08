@@ -3132,18 +3132,11 @@ Discarded input sections
  .group         0x00000000        0xc src/main.o
  .group         0x00000000        0xc src/main.o
  .text          0x00000000        0x0 src/main.o
- .data          0x00000000        0x0 src/main.o
  .bss           0x00000000        0x0 src/main.o
-<<<<<<< Updated upstream
- .text.mysleep  0x00000000       0x28 src/main.o
- .text.setn     0x00000000       0x5c src/main.o
  .text.readpin  0x00000000       0x30 src/main.o
  .text.buttons  0x00000000       0x2a src/main.o
- .text.keypad   0x00000000       0x70 src/main.o
-=======
- .text.readpin  0x00000000       0x30 src/main.o
- .text.buttons  0x00000000       0x2a src/main.o
->>>>>>> Stashed changes
+ .text.setup_tim2
+                0x00000000      0x124 src/main.o
  .debug_macro   0x00000000      0xa5a src/main.o
  .debug_macro   0x00000000       0x81 src/main.o
  .debug_macro   0x00000000       0x3a src/main.o
@@ -3520,174 +3513,11 @@ LOAD c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17
                 0x08000000                g_pfnVectors
                 0x080000c0                . = ALIGN (0x4)
 
-<<<<<<< Updated upstream
-.text           0x080000c0      0x59c
-=======
-.text           0x080000c0      0x564
->>>>>>> Stashed changes
+.text           0x080000c0      0x630
                 0x080000c0                . = ALIGN (0x4)
  *(.text)
  .text          0x080000c0       0x48 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
  *(.text*)
-<<<<<<< Updated upstream
- .text.main     0x08000108       0x12 src/main.o
-                0x08000108                main
- *fill*         0x0800011a        0x2 
- .text.initb    0x0800011c       0x50 src/main.o
-                0x0800011c                initb
- .text.initc    0x0800016c       0x54 src/main.o
-                0x0800016c                initc
- .text.setup_tim2
-                0x080001c0      0x124 src/main.o
-                0x080001c0                setup_tim2
- .text.SystemInit
-                0x080002e4       0x8c src/system_stm32f0xx.o
-                0x080002e4                SystemInit
- .text.SetSysClock
-                0x08000370       0xe0 src/system_stm32f0xx.o
- .text.Reset_Handler
-                0x08000450       0x50 startup/startup_stm32.o
-                0x08000450                Reset_Handler
- .text.Default_Handler
-                0x080004a0        0x2 startup/startup_stm32.o
-                0x080004a0                DMA1_CH4_5_6_7_DMA2_CH3_4_5_IRQHandler
-                0x080004a0                TIM1_CC_IRQHandler
-                0x080004a0                TSC_IRQHandler
-                0x080004a0                HardFault_Handler
-                0x080004a0                SysTick_Handler
-                0x080004a0                PVD_IRQHandler
-                0x080004a0                PendSV_Handler
-                0x080004a0                NMI_Handler
-                0x080004a0                I2C1_IRQHandler
-                0x080004a0                RCC_CRS_IRQHandler
-                0x080004a0                SPI1_IRQHandler
-                0x080004a0                TIM6_DAC_IRQHandler
-                0x080004a0                EXTI2_3_IRQHandler
-                0x080004a0                I2C2_IRQHandler
-                0x080004a0                TIM17_IRQHandler
-                0x080004a0                CEC_CAN_IRQHandler
-                0x080004a0                RTC_IRQHandler
-                0x080004a0                TIM16_IRQHandler
-                0x080004a0                TIM3_IRQHandler
-                0x080004a0                EXTI4_15_IRQHandler
-                0x080004a0                Default_Handler
-                0x080004a0                DMA1_CH2_3_DMA2_CH1_2_IRQHandler
-                0x080004a0                TIM14_IRQHandler
-                0x080004a0                TIM7_IRQHandler
-                0x080004a0                TIM15_IRQHandler
-                0x080004a0                EXTI0_1_IRQHandler
-                0x080004a0                USB_IRQHandler
-                0x080004a0                SPI2_IRQHandler
-                0x080004a0                DMA1_CH1_IRQHandler
-                0x080004a0                SVC_Handler
-                0x080004a0                WWDG_IRQHandler
-                0x080004a0                TIM2_IRQHandler
-                0x080004a0                ADC_COMP_IRQHandler
-                0x080004a0                USART2_IRQHandler
-                0x080004a0                USART3_4_5_6_7_8_IRQHandler
-                0x080004a0                FLASH_IRQHandler
-                0x080004a0                USART1_IRQHandler
-                0x080004a0                TIM1_BRK_UP_TRG_COM_IRQHandler
- *fill*         0x080004a2        0x2 
- .text.__libc_init_array
-                0x080004a4       0x48 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-init.o)
-                0x080004a4                __libc_init_array
- .text.startup.register_fini
-                0x080004ec       0x18 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
- .text.atexit   0x08000504       0x10 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-atexit.o)
-                0x08000504                atexit
- .text.__libc_fini_array
-                0x08000514       0x34 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-fini.o)
-                0x08000514                __libc_fini_array
- .text.__retarget_lock_acquire_recursive
-                0x08000548        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
-                0x08000548                __retarget_lock_acquire_recursive
- .text.__retarget_lock_release_recursive
-                0x0800054c        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
-                0x0800054c                __retarget_lock_release_recursive
- .text.__register_exitproc
-                0x08000550       0xf4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__atexit.o)
-                0x08000550                __register_exitproc
- *(.glue_7)
- .glue_7        0x08000644        0x0 linker stubs
- *(.glue_7t)
- .glue_7t       0x08000644        0x0 linker stubs
- *(.eh_frame)
- .eh_frame      0x08000644        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
- *(.init)
- .init          0x08000644        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
-                0x08000644                _init
- .init          0x08000648        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
- *(.fini)
- .fini          0x08000650        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
-                0x08000650                _fini
- .fini          0x08000654        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
-                0x0800065c                . = ALIGN (0x4)
-                0x0800065c                _etext = .
-
-.vfp11_veneer   0x0800065c        0x0
- .vfp11_veneer  0x0800065c        0x0 linker stubs
-
-.v4_bx          0x0800065c        0x0
- .v4_bx         0x0800065c        0x0 linker stubs
-
-.iplt           0x0800065c        0x0
- .iplt          0x0800065c        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-
-.rodata         0x0800065c        0x4
-                0x0800065c                . = ALIGN (0x4)
- *(.rodata)
- *(.rodata*)
- .rodata._global_impure_ptr
-                0x0800065c        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-impure.o)
-                0x0800065c                _global_impure_ptr
-                0x08000660                . = ALIGN (0x4)
-
-.rel.dyn        0x08000660        0x0
- .rel.iplt      0x08000660        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-
-.ARM.extab      0x08000660        0x0
-                0x08000660                . = ALIGN (0x4)
- *(.ARM.extab* .gnu.linkonce.armextab.*)
-                0x08000660                . = ALIGN (0x4)
-
-.ARM            0x08000660        0x0
-                0x08000660                . = ALIGN (0x4)
-                0x08000660                __exidx_start = .
- *(.ARM.exidx*)
-                0x08000660                __exidx_end = .
-                0x08000660                . = ALIGN (0x4)
-
-.preinit_array  0x08000660        0x0
-                0x08000660                . = ALIGN (0x4)
-                0x08000660                PROVIDE (__preinit_array_start = .)
- *(.preinit_array*)
-                0x08000660                PROVIDE (__preinit_array_end = .)
-                0x08000660                . = ALIGN (0x4)
-
-.init_array     0x08000660        0x8
-                0x08000660                . = ALIGN (0x4)
-                0x08000660                PROVIDE (__init_array_start = .)
- *(SORT_BY_NAME(.init_array.*))
- .init_array.00000
-                0x08000660        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
- *(.init_array*)
- .init_array    0x08000664        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x08000668                PROVIDE (__init_array_end = .)
-                0x08000668                . = ALIGN (0x4)
-
-.fini_array     0x08000668        0x4
-                0x08000668                . = ALIGN (0x4)
-                0x08000668                PROVIDE (__fini_array_start = .)
- *(SORT_BY_NAME(.fini_array.*))
- *(.fini_array*)
- .fini_array    0x08000668        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x0800066c                PROVIDE (__fini_array_end = .)
-                0x0800066c                . = ALIGN (0x4)
-                0x0800066c                _sidata = LOADADDR (.data)
-
-.data           0x20000000      0x42c load address 0x0800066c
-=======
  .text.mysleep  0x08000108       0x28 src/main.o
                 0x08000108                mysleep
  .text.main     0x08000130       0x12 src/main.o
@@ -3699,216 +3529,208 @@ LOAD c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17
                 0x08000194                initc
  .text.setn     0x080001e8       0x5c src/main.o
                 0x080001e8                setn
- .text.keypad   0x08000244       0x68 src/main.o
+ .text.keypad   0x08000244      0x134 src/main.o
                 0x08000244                keypad
  .text.SystemInit
-                0x080002ac       0x8c src/system_stm32f0xx.o
-                0x080002ac                SystemInit
+                0x08000378       0x8c src/system_stm32f0xx.o
+                0x08000378                SystemInit
  .text.SetSysClock
-                0x08000338       0xe0 src/system_stm32f0xx.o
+                0x08000404       0xe0 src/system_stm32f0xx.o
  .text.Reset_Handler
-                0x08000418       0x50 startup/startup_stm32.o
-                0x08000418                Reset_Handler
+                0x080004e4       0x50 startup/startup_stm32.o
+                0x080004e4                Reset_Handler
  .text.Default_Handler
-                0x08000468        0x2 startup/startup_stm32.o
-                0x08000468                DMA1_CH4_5_6_7_DMA2_CH3_4_5_IRQHandler
-                0x08000468                TIM1_CC_IRQHandler
-                0x08000468                TSC_IRQHandler
-                0x08000468                HardFault_Handler
-                0x08000468                SysTick_Handler
-                0x08000468                PVD_IRQHandler
-                0x08000468                PendSV_Handler
-                0x08000468                NMI_Handler
-                0x08000468                I2C1_IRQHandler
-                0x08000468                RCC_CRS_IRQHandler
-                0x08000468                SPI1_IRQHandler
-                0x08000468                TIM6_DAC_IRQHandler
-                0x08000468                EXTI2_3_IRQHandler
-                0x08000468                I2C2_IRQHandler
-                0x08000468                TIM17_IRQHandler
-                0x08000468                CEC_CAN_IRQHandler
-                0x08000468                RTC_IRQHandler
-                0x08000468                TIM16_IRQHandler
-                0x08000468                TIM3_IRQHandler
-                0x08000468                EXTI4_15_IRQHandler
-                0x08000468                Default_Handler
-                0x08000468                DMA1_CH2_3_DMA2_CH1_2_IRQHandler
-                0x08000468                TIM14_IRQHandler
-                0x08000468                TIM7_IRQHandler
-                0x08000468                TIM15_IRQHandler
-                0x08000468                EXTI0_1_IRQHandler
-                0x08000468                USB_IRQHandler
-                0x08000468                SPI2_IRQHandler
-                0x08000468                DMA1_CH1_IRQHandler
-                0x08000468                SVC_Handler
-                0x08000468                WWDG_IRQHandler
-                0x08000468                TIM2_IRQHandler
-                0x08000468                ADC_COMP_IRQHandler
-                0x08000468                USART2_IRQHandler
-                0x08000468                USART3_4_5_6_7_8_IRQHandler
-                0x08000468                FLASH_IRQHandler
-                0x08000468                USART1_IRQHandler
-                0x08000468                TIM1_BRK_UP_TRG_COM_IRQHandler
- *fill*         0x0800046a        0x2 
+                0x08000534        0x2 startup/startup_stm32.o
+                0x08000534                DMA1_CH4_5_6_7_DMA2_CH3_4_5_IRQHandler
+                0x08000534                TIM1_CC_IRQHandler
+                0x08000534                TSC_IRQHandler
+                0x08000534                HardFault_Handler
+                0x08000534                SysTick_Handler
+                0x08000534                PVD_IRQHandler
+                0x08000534                PendSV_Handler
+                0x08000534                NMI_Handler
+                0x08000534                I2C1_IRQHandler
+                0x08000534                RCC_CRS_IRQHandler
+                0x08000534                SPI1_IRQHandler
+                0x08000534                TIM6_DAC_IRQHandler
+                0x08000534                EXTI2_3_IRQHandler
+                0x08000534                I2C2_IRQHandler
+                0x08000534                TIM17_IRQHandler
+                0x08000534                CEC_CAN_IRQHandler
+                0x08000534                RTC_IRQHandler
+                0x08000534                TIM16_IRQHandler
+                0x08000534                TIM3_IRQHandler
+                0x08000534                EXTI4_15_IRQHandler
+                0x08000534                Default_Handler
+                0x08000534                DMA1_CH2_3_DMA2_CH1_2_IRQHandler
+                0x08000534                TIM14_IRQHandler
+                0x08000534                TIM7_IRQHandler
+                0x08000534                TIM15_IRQHandler
+                0x08000534                EXTI0_1_IRQHandler
+                0x08000534                USB_IRQHandler
+                0x08000534                SPI2_IRQHandler
+                0x08000534                DMA1_CH1_IRQHandler
+                0x08000534                SVC_Handler
+                0x08000534                WWDG_IRQHandler
+                0x08000534                TIM2_IRQHandler
+                0x08000534                ADC_COMP_IRQHandler
+                0x08000534                USART2_IRQHandler
+                0x08000534                USART3_4_5_6_7_8_IRQHandler
+                0x08000534                FLASH_IRQHandler
+                0x08000534                USART1_IRQHandler
+                0x08000534                TIM1_BRK_UP_TRG_COM_IRQHandler
+ *fill*         0x08000536        0x2 
  .text.__libc_init_array
-                0x0800046c       0x48 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-init.o)
-                0x0800046c                __libc_init_array
+                0x08000538       0x48 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-init.o)
+                0x08000538                __libc_init_array
  .text.startup.register_fini
-                0x080004b4       0x18 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
- .text.atexit   0x080004cc       0x10 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-atexit.o)
-                0x080004cc                atexit
+                0x08000580       0x18 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
+ .text.atexit   0x08000598       0x10 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-atexit.o)
+                0x08000598                atexit
  .text.__libc_fini_array
-                0x080004dc       0x34 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-fini.o)
-                0x080004dc                __libc_fini_array
+                0x080005a8       0x34 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-fini.o)
+                0x080005a8                __libc_fini_array
  .text.__retarget_lock_acquire_recursive
-                0x08000510        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
-                0x08000510                __retarget_lock_acquire_recursive
+                0x080005dc        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
+                0x080005dc                __retarget_lock_acquire_recursive
  .text.__retarget_lock_release_recursive
-                0x08000514        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
-                0x08000514                __retarget_lock_release_recursive
+                0x080005e0        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
+                0x080005e0                __retarget_lock_release_recursive
  .text.__register_exitproc
-                0x08000518       0xf4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__atexit.o)
-                0x08000518                __register_exitproc
+                0x080005e4       0xf4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__atexit.o)
+                0x080005e4                __register_exitproc
  *(.glue_7)
- .glue_7        0x0800060c        0x0 linker stubs
+ .glue_7        0x080006d8        0x0 linker stubs
  *(.glue_7t)
- .glue_7t       0x0800060c        0x0 linker stubs
+ .glue_7t       0x080006d8        0x0 linker stubs
  *(.eh_frame)
- .eh_frame      0x0800060c        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+ .eh_frame      0x080006d8        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
  *(.init)
- .init          0x0800060c        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
-                0x0800060c                _init
- .init          0x08000610        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
+ .init          0x080006d8        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
+                0x080006d8                _init
+ .init          0x080006dc        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
  *(.fini)
- .fini          0x08000618        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
-                0x08000618                _fini
- .fini          0x0800061c        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
-                0x08000624                . = ALIGN (0x4)
-                0x08000624                _etext = .
+ .fini          0x080006e4        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crti.o
+                0x080006e4                _fini
+ .fini          0x080006e8        0x8 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
+                0x080006f0                . = ALIGN (0x4)
+                0x080006f0                _etext = .
 
-.vfp11_veneer   0x08000624        0x0
- .vfp11_veneer  0x08000624        0x0 linker stubs
+.vfp11_veneer   0x080006f0        0x0
+ .vfp11_veneer  0x080006f0        0x0 linker stubs
 
-.v4_bx          0x08000624        0x0
- .v4_bx         0x08000624        0x0 linker stubs
+.v4_bx          0x080006f0        0x0
+ .v4_bx         0x080006f0        0x0 linker stubs
 
-.iplt           0x08000624        0x0
- .iplt          0x08000624        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+.iplt           0x080006f0        0x0
+ .iplt          0x080006f0        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
 
-.rodata         0x08000624        0x4
-                0x08000624                . = ALIGN (0x4)
+.rodata         0x080006f0       0x18
+                0x080006f0                . = ALIGN (0x4)
  *(.rodata)
+ .rodata        0x080006f0       0x11 src/main.o
  *(.rodata*)
+ *fill*         0x08000701        0x3 
  .rodata._global_impure_ptr
-                0x08000624        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-impure.o)
-                0x08000624                _global_impure_ptr
-                0x08000628                . = ALIGN (0x4)
+                0x08000704        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-impure.o)
+                0x08000704                _global_impure_ptr
+                0x08000708                . = ALIGN (0x4)
 
-.rel.dyn        0x08000628        0x0
- .rel.iplt      0x08000628        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+.rel.dyn        0x08000708        0x0
+ .rel.iplt      0x08000708        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
 
-.ARM.extab      0x08000628        0x0
-                0x08000628                . = ALIGN (0x4)
+.ARM.extab      0x08000708        0x0
+                0x08000708                . = ALIGN (0x4)
  *(.ARM.extab* .gnu.linkonce.armextab.*)
-                0x08000628                . = ALIGN (0x4)
+                0x08000708                . = ALIGN (0x4)
 
-.ARM            0x08000628        0x0
-                0x08000628                . = ALIGN (0x4)
-                0x08000628                __exidx_start = .
+.ARM            0x08000708        0x0
+                0x08000708                . = ALIGN (0x4)
+                0x08000708                __exidx_start = .
  *(.ARM.exidx*)
-                0x08000628                __exidx_end = .
-                0x08000628                . = ALIGN (0x4)
+                0x08000708                __exidx_end = .
+                0x08000708                . = ALIGN (0x4)
 
-.preinit_array  0x08000628        0x0
-                0x08000628                . = ALIGN (0x4)
-                0x08000628                PROVIDE (__preinit_array_start = .)
+.preinit_array  0x08000708        0x0
+                0x08000708                . = ALIGN (0x4)
+                0x08000708                PROVIDE (__preinit_array_start = .)
  *(.preinit_array*)
-                0x08000628                PROVIDE (__preinit_array_end = .)
-                0x08000628                . = ALIGN (0x4)
+                0x08000708                PROVIDE (__preinit_array_end = .)
+                0x08000708                . = ALIGN (0x4)
 
-.init_array     0x08000628        0x8
-                0x08000628                . = ALIGN (0x4)
-                0x08000628                PROVIDE (__init_array_start = .)
+.init_array     0x08000708        0x8
+                0x08000708                . = ALIGN (0x4)
+                0x08000708                PROVIDE (__init_array_start = .)
  *(SORT_BY_NAME(.init_array.*))
  .init_array.00000
-                0x08000628        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
+                0x08000708        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
  *(.init_array*)
- .init_array    0x0800062c        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x08000630                PROVIDE (__init_array_end = .)
-                0x08000630                . = ALIGN (0x4)
+ .init_array    0x0800070c        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+                0x08000710                PROVIDE (__init_array_end = .)
+                0x08000710                . = ALIGN (0x4)
 
-.fini_array     0x08000630        0x4
-                0x08000630                . = ALIGN (0x4)
-                0x08000630                PROVIDE (__fini_array_start = .)
+.fini_array     0x08000710        0x4
+                0x08000710                . = ALIGN (0x4)
+                0x08000710                PROVIDE (__fini_array_start = .)
  *(SORT_BY_NAME(.fini_array.*))
  *(.fini_array*)
- .fini_array    0x08000630        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x08000634                PROVIDE (__fini_array_end = .)
-                0x08000634                . = ALIGN (0x4)
-                0x08000634                _sidata = LOADADDR (.data)
+ .fini_array    0x08000710        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+                0x08000714                PROVIDE (__fini_array_end = .)
+                0x08000714                . = ALIGN (0x4)
+                0x08000714                _sidata = LOADADDR (.data)
 
-.data           0x20000000      0x42c load address 0x08000634
->>>>>>> Stashed changes
+.data           0x20000000      0x434 load address 0x08000714
                 0x20000000                . = ALIGN (0x4)
                 0x20000000                _sdata = .
  *(.data)
+ .data          0x20000000        0x8 src/main.o
+                0x20000000                keymap
+                0x20000004                keymap_arr
  *(.data*)
  .data.impure_data
-                0x20000000      0x428 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-impure.o)
+                0x20000008      0x428 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-impure.o)
  .data.__atexit_recursive_mutex
-                0x20000428        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
-                0x20000428                __atexit_recursive_mutex
-                0x2000042c                . = ALIGN (0x4)
-                0x2000042c                _edata = .
+                0x20000430        0x4 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
+                0x20000430                __atexit_recursive_mutex
+                0x20000434                . = ALIGN (0x4)
+                0x20000434                _edata = .
 
-<<<<<<< Updated upstream
-.igot.plt       0x2000042c        0x0 load address 0x08000a98
- .igot.plt      0x2000042c        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x2000042c                . = ALIGN (0x4)
+.igot.plt       0x20000434        0x0 load address 0x08000b48
+ .igot.plt      0x20000434        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+                0x20000434                . = ALIGN (0x4)
 
-.bss            0x2000042c       0x40 load address 0x08000a98
-=======
-.igot.plt       0x2000042c        0x0 load address 0x08000a60
- .igot.plt      0x2000042c        0x0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
-                0x2000042c                . = ALIGN (0x4)
-
-.bss            0x2000042c       0x40 load address 0x08000a60
->>>>>>> Stashed changes
-                0x2000042c                _sbss = .
-                0x2000042c                __bss_start__ = _sbss
+.bss            0x20000434       0x40 load address 0x08000b48
+                0x20000434                _sbss = .
+                0x20000434                __bss_start__ = _sbss
  *(.bss)
- .bss           0x2000042c       0x1c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
+ .bss           0x20000434       0x1c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtbegin.o
  *(.bss*)
  *(COMMON)
- COMMON         0x20000448       0x21 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
-                0x20000448                __lock___atexit_recursive_mutex
-                0x2000044c                __lock___arc4random_mutex
-                0x20000450                __lock___env_recursive_mutex
-                0x20000454                __lock___sinit_recursive_mutex
-                0x20000458                __lock___malloc_recursive_mutex
-                0x2000045c                __lock___at_quick_exit_mutex
-                0x20000460                __lock___dd_hash_mutex
-                0x20000464                __lock___tz_mutex
-                0x20000468                __lock___sfp_recursive_mutex
-                0x2000046c                . = ALIGN (0x4)
- *fill*         0x20000469        0x3 
-                0x2000046c                _ebss = .
-                0x2000046c                __bss_end__ = _ebss
+ COMMON         0x20000450       0x21 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
+                0x20000450                __lock___atexit_recursive_mutex
+                0x20000454                __lock___arc4random_mutex
+                0x20000458                __lock___env_recursive_mutex
+                0x2000045c                __lock___sinit_recursive_mutex
+                0x20000460                __lock___malloc_recursive_mutex
+                0x20000464                __lock___at_quick_exit_mutex
+                0x20000468                __lock___dd_hash_mutex
+                0x2000046c                __lock___tz_mutex
+                0x20000470                __lock___sfp_recursive_mutex
+                0x20000474                . = ALIGN (0x4)
+ *fill*         0x20000471        0x3 
+                0x20000474                _ebss = .
+                0x20000474                __bss_end__ = _ebss
 
 ._user_heap_stack
-<<<<<<< Updated upstream
-                0x2000046c      0x404 load address 0x08000a98
-=======
-                0x2000046c      0x404 load address 0x08000a60
->>>>>>> Stashed changes
-                0x20000470                . = ALIGN (0x8)
- *fill*         0x2000046c        0x4 
-                0x20000470                PROVIDE (end = .)
+                0x20000474      0x404 load address 0x08000b48
+                0x20000478                . = ALIGN (0x8)
+ *fill*         0x20000474        0x4 
+                0x20000478                PROVIDE (end = .)
                 [!provide]                PROVIDE (_end = .)
-                0x20000470                . = (. + _Min_Heap_Size)
-                0x20000870                . = (. + _Min_Stack_Size)
- *fill*         0x20000470      0x400 
-                0x20000870                . = ALIGN (0x8)
+                0x20000478                . = (. + _Min_Heap_Size)
+                0x20000878                . = (. + _Min_Stack_Size)
+ *fill*         0x20000478      0x400 
+                0x20000878                . = ALIGN (0x8)
 
 /DISCARD/
  libc.a(*)
@@ -3946,16 +3768,15 @@ LOAD c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17
                 0x00000201       0x1e c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/crtn.o
 OUTPUT(Senior_Design.elf elf32-littlearm)
 
-<<<<<<< Updated upstream
-.debug_info     0x00000000      0x898
- .debug_info    0x00000000      0x570 src/main.o
- .debug_info    0x00000570      0x306 src/system_stm32f0xx.o
- .debug_info    0x00000876       0x22 startup/startup_stm32.o
+.debug_info     0x00000000      0x8df
+ .debug_info    0x00000000      0x5b7 src/main.o
+ .debug_info    0x000005b7      0x306 src/system_stm32f0xx.o
+ .debug_info    0x000008bd       0x22 startup/startup_stm32.o
 
-.debug_abbrev   0x00000000      0x316
- .debug_abbrev  0x00000000      0x1a9 src/main.o
- .debug_abbrev  0x000001a9      0x15b src/system_stm32f0xx.o
- .debug_abbrev  0x00000304       0x12 startup/startup_stm32.o
+.debug_abbrev   0x00000000      0x330
+ .debug_abbrev  0x00000000      0x1c3 src/main.o
+ .debug_abbrev  0x000001c3      0x15b src/system_stm32f0xx.o
+ .debug_abbrev  0x0000031e       0x12 startup/startup_stm32.o
 
 .debug_aranges  0x00000000       0xb8
  .debug_aranges
@@ -3969,67 +3790,28 @@ OUTPUT(Senior_Design.elf elf32-littlearm)
  .debug_ranges  0x00000000       0x50 src/main.o
  .debug_ranges  0x00000050       0x20 src/system_stm32f0xx.o
  .debug_ranges  0x00000070       0x20 startup/startup_stm32.o
-=======
-.debug_info     0x00000000      0x69f
- .debug_info    0x00000000      0x377 src/main.o
- .debug_info    0x00000377      0x306 src/system_stm32f0xx.o
- .debug_info    0x0000067d       0x22 startup/startup_stm32.o
 
-.debug_abbrev   0x00000000      0x2fe
- .debug_abbrev  0x00000000      0x191 src/main.o
- .debug_abbrev  0x00000191      0x15b src/system_stm32f0xx.o
- .debug_abbrev  0x000002ec       0x12 startup/startup_stm32.o
+.debug_macro    0x00000000      0x312
+ .debug_macro   0x00000000      0x189 src/main.o
+ .debug_macro   0x00000189      0x189 src/system_stm32f0xx.o
 
-.debug_aranges  0x00000000       0xb0
- .debug_aranges
-                0x00000000       0x58 src/main.o
- .debug_aranges
-                0x00000058       0x30 src/system_stm32f0xx.o
- .debug_aranges
-                0x00000088       0x28 startup/startup_stm32.o
+.debug_line     0x00000000      0xd9c
+ .debug_line    0x00000000      0x6bf src/main.o
+ .debug_line    0x000006bf      0x661 src/system_stm32f0xx.o
+ .debug_line    0x00000d20       0x7c startup/startup_stm32.o
 
-.debug_ranges   0x00000000       0x88
- .debug_ranges  0x00000000       0x48 src/main.o
- .debug_ranges  0x00000048       0x20 src/system_stm32f0xx.o
- .debug_ranges  0x00000068       0x20 startup/startup_stm32.o
->>>>>>> Stashed changes
-
-.debug_macro    0x00000000      0x318
- .debug_macro   0x00000000      0x18f src/main.o
- .debug_macro   0x0000018f      0x189 src/system_stm32f0xx.o
-
-<<<<<<< Updated upstream
-.debug_line     0x00000000      0xd9d
- .debug_line    0x00000000      0x6c0 src/main.o
- .debug_line    0x000006c0      0x661 src/system_stm32f0xx.o
- .debug_line    0x00000d21       0x7c startup/startup_stm32.o
-
-.debug_str      0x00000000    0x4ab0e
- .debug_str     0x00000000    0x4a9f0 src/main.o
-                              0x4ab6a (size before relaxing)
- .debug_str     0x0004a9f0       0xc2 src/system_stm32f0xx.o
+.debug_str      0x00000000    0x4ab18
+ .debug_str     0x00000000    0x4a9fa src/main.o
+                              0x4ab74 (size before relaxing)
+ .debug_str     0x0004a9fa       0xc2 src/system_stm32f0xx.o
                               0x4aaaa (size before relaxing)
- .debug_str     0x0004aab2       0x5c startup/startup_stm32.o
-=======
-.debug_line     0x00000000      0xd77
- .debug_line    0x00000000      0x69a src/main.o
- .debug_line    0x0000069a      0x661 src/system_stm32f0xx.o
- .debug_line    0x00000cfb       0x7c startup/startup_stm32.o
-
-.debug_str      0x00000000    0x4aa42
- .debug_str     0x00000000    0x4a924 src/main.o
-                              0x4aa99 (size before relaxing)
- .debug_str     0x0004a924       0xc2 src/system_stm32f0xx.o
-                              0x4aaaa (size before relaxing)
- .debug_str     0x0004a9e6       0x5c startup/startup_stm32.o
->>>>>>> Stashed changes
+ .debug_str     0x0004aabc       0x5c startup/startup_stm32.o
 
 .comment        0x00000000       0x7f
  .comment       0x00000000       0x7f src/main.o
                                  0x80 (size before relaxing)
  .comment       0x0000007f       0x80 src/system_stm32f0xx.o
 
-<<<<<<< Updated upstream
 .debug_frame    0x00000000      0x348
  .debug_frame   0x00000000      0x11c src/main.o
  .debug_frame   0x0000011c       0x6c src/system_stm32f0xx.o
@@ -4039,14 +3821,3 @@ OUTPUT(Senior_Design.elf elf32-littlearm)
  .debug_frame   0x00000230       0x2c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-fini.o)
  .debug_frame   0x0000025c       0xb0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
  .debug_frame   0x0000030c       0x3c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__atexit.o)
-=======
-.debug_frame    0x00000000      0x32c
- .debug_frame   0x00000000      0x100 src/main.o
- .debug_frame   0x00000100       0x6c src/system_stm32f0xx.o
- .debug_frame   0x0000016c       0x2c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-init.o)
- .debug_frame   0x00000198       0x54 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__call_atexit.o)
- .debug_frame   0x000001ec       0x28 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-atexit.o)
- .debug_frame   0x00000214       0x2c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-fini.o)
- .debug_frame   0x00000240       0xb0 c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-lock.o)
- .debug_frame   0x000002f0       0x3c c:/ac6/systemworkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin/../lib/gcc/arm-none-eabi/7.3.1/../../../../arm-none-eabi/lib/thumb/v6-m\libc.a(lib_a-__atexit.o)
->>>>>>> Stashed changes

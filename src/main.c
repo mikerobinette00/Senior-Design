@@ -12,7 +12,7 @@
 #include "stm32f0xx.h"
 #include <stdint.h>
 
-//keymap = "DCBA096308520741";
+keymap = "DCBA096308520741";
 
 void initb();
 void initc();
@@ -22,7 +22,7 @@ void buttons(void);
 void keypad(void);
 void setup_tim2(void);
 
-//char* keymap_arr = &keymap;
+char* keymap_arr = &keymap;
 //extern uint8_t col;
 
 void mysleep(void) {
@@ -41,16 +41,16 @@ int main(void) {
 //       buttons();
 //     }
 
-     //while(1) {
-       //keypad();
-     //}
+     while(1) {
+       keypad();
+     }
      //setup_tim2();
 
-	#define TEST_TIMER2
+	/*#define TEST_TIMER2
 	#ifdef TEST_TIMER2
 		setup_tim2();
 		for(;;) { }
-	#endif
+	#endif*/
 
     //for(;;);
 }
@@ -97,8 +97,8 @@ void initc() {
 void setn(int32_t pin_num, int32_t val) {
 
     if(val != 0) {
-        GPIOB->ODR |= 0x0001 << pin_num;
-    	//GPIOB->ODR |= keymap_arr[3];
+        //GPIOB->ODR |= 0x0001 << pin_num;
+    	GPIOB->ODR |= val;
     }
     else {
         GPIOB->ODR &= ~(0x1 << pin_num);
@@ -144,8 +144,23 @@ void keypad(void) {
         GPIOC->ODR &= 0x0000;
         GPIOC->ODR |= 0x0001 << (i+3);
         mysleep();
-        setn(i+7, GPIOC->IDR & 0x1 << (i-1));
+        //setn(i+7, GPIOC->IDR & 0xF);// << (i-1));
+        int rows = GPIOC->IDR & 0xF;
+        if(rows == 0x8) {
+        	GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 3)];
+		}
+		else if(rows == 0x4) {
+			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 2)];
+		}
+		else if(rows == 0x2) {
+			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 1)];
+		}
+		else if(rows == 0x1) {
+			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 0)];
+		}
     }
+
+
 
     //(4-i)
 }
