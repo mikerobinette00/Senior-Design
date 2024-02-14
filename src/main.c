@@ -307,4 +307,34 @@ void spi1_enable_dma(void) {
 }
 
 
+void tim2_PWM(void) {
+	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+	//Pinout layout: PA1-PA3
+	GPIOA -> MODER &= ~0x000000FC;
+	GPIOA -> MODER |= 0x000000A8;
+
+	//Come back to the AFR and what it does
+	GPIOA -> AFR[0] &= ~0x0000FFF0;
+	GPIOA -> AFR[0] |= 0x00002220;
+
+	//Scaling the timer; Currently set to 1 Hz
+	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
+	TIM2 -> PSC = 47999;
+	TIM2 -> ARR = 999;
+
+	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
+	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
+
+	//Enable Output
+	TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+	//Enable TIM2 Counter
+	TIM2 -> CR1 |= TIM_CR1_CEN;
+
+	//Determines the duty cycle
+	TIM2 -> CCR2 = 400;
+	TIM2 -> CCR3 = 200;
+	TIM2 -> CCR4 = 100;
+}
 
