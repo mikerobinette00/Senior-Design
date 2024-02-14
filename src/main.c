@@ -12,47 +12,82 @@
 #include "stm32f0xx.h"
 #include <stdint.h>
 
-keymap = "DCBA096308520741";
+uint8_t col = 0;
 
-void initb();
-void initc();
-void setn(int32_t pin_num, int32_t val);
-int32_t readpin(int32_t pin_num);
-void buttons(void);
-void keypad(void);
-void setup_tim2(void);
+// Be sure to change this to your login...
+const char login[] = "robinetm";
 
-char* keymap_arr = &keymap;
-//extern uint8_t col;
+char keymap_arr[] = "DCBA#9630852*741";
+
+void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
+
+//===========================================================================
+// This is the 34-entry buffer to be copied into SPI1.
+// Each element is a 16-bit value that is either character data or a command.
+// Element 0 is the command to set the cursor to the first position of line 1.
+// The next 16 elements are 16 characters.
+// Element 17 is the command to set the cursor to the first position of line 2.
+//===========================================================================
+uint16_t display[34] = {
+        0x002, // Command to set the cursor at the first position line 1
+        0x200+'E', 0x200+'C', 0x200+'E', 0x200+'3', 0x200+'6', + 0x200+'2', 0x200+' ', 0x200+'i',
+        0x200+'s', 0x200+' ', 0x200+'t', 0x200+'h', + 0x200+'e', 0x200+' ', 0x200+' ', 0x200+' ',
+        0x0c0, // Command to set the cursor at the first position line 2
+        0x200+'c', 0x200+'l', 0x200+'a', 0x200+'s', 0x200+'s', + 0x200+' ', 0x200+'f', 0x200+'o',
+        0x200+'r', 0x200+' ', 0x200+'y', 0x200+'o', + 0x200+'u', 0x200+'!', 0x200+' ', 0x200+' ',
+};
+
+void init_pins();
+void setn(char val);
+
+void drive_column(int c);
+int read_rows();
+char rows_to_key(int rows);
+//void handle_key(char key);
+void setup_tim7();
+void TIM7_IRQHandler();
+
+void init_spi1();
+void spi_cmd(unsigned int data);
+void spi_data(unsigned int data);
+void spi1_init_oled();
+void spi1_display1(const char *string);
+void spi1_display2(const char *string);
+void spi1_setup_dma(void);
+void spi1_enable_dma(void);
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
 }
 
 int main(void) {
-    // Uncomment when most things are working
-    //autotest();
+    init_pins();
+    setup_tim7();
 
-    initb();
-    initc();
+    // SPI OLED direct drive
+    #define SPI_OLED
+    #if defined(SPI_OLED)
+    init_spi1();
+    spi1_init_oled();
+    spi1_display1("Hello again,");
+    spi1_display2(login);
 
-    // uncomment one of the loops, below, when ready
-//     while(1) {
-//       buttons();
-//     }
+    spi_data('hello');
+    #endif
 
-     while(1) {
-       keypad();
-     }
-     //setup_tim2();
-
-	/*#define TEST_TIMER2
-	#ifdef TEST_TIMER2
-		setup_tim2();
-		for(;;) { }
-	#endif*/
-
-    //for(;;);
+    // SPI
+    //#define SPI_OLED_DMA
+    #if defined(SPI_OLED_DMA)
+    init_spi1();
+    spi1_init_oled();
+    spi1_setup_dma();
+    spi1_enable_dma();
+    #endif
+    for(;;);
 }
 
 /**
@@ -60,144 +95,67 @@ int main(void) {
  *        Pin 0: input
  *        Pin 4: input
  *        Pin 8-11: output
- *
- */
-void initb() {
-    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-
-    GPIOB->MODER &= ~0x00ff0000;
-    GPIOB->MODER |= 0x00550000; // output pb11-pb8
-
-    GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
-}
-
-/**
  * @brief Init GPIO port C
  *        Pin 0-3: inputs with internal pull down resistors
  *        Pin 4-7: outputs
  *
  */
-void initc() {
+void init_pins() {
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
 
-    GPIOC->MODER &= ~0x0000ffff; //reset ports 0-7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
+    GPIOB->MODER &= ~0x00ff0000;
+    GPIOB->MODER |= 0x00550000; // output pb11-pb8
+
+    GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
+
+    GPIOC->MODER &= 0xffff0000; //reset ports C0-C7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
     GPIOC->MODER |= 0x00005500; // output pc7-pc4
 
     GPIOC->PUPDR &= ~0x000000ff;
     GPIOC->PUPDR |= 0x000000AA;
 }
 
+
 /**
  * @brief Set GPIO port B pin to some value
  *
- * @param pin_num: Pin number in GPIO B
  * @param val    : Pin value, if 0 then the
  *                 pin is set low, else set high
  */
-void setn(int32_t pin_num, int32_t val) {
+void setn(char val) {
 
     if(val != 0) {
-        //GPIOB->ODR |= 0x0001 << pin_num;
-    	GPIOB->ODR |= val;
+    	GPIOB->ODR |= val << 8;
     }
     else {
-        GPIOB->ODR &= ~(0x1 << pin_num);
+        GPIOB->ODR &= ~(0xF << 8);
     }
 }
 
 
-
 /**
- * @brief Read GPIO port B pin values
+ * @brief Drive the column pins of the keypad
+ *        First clear the keypad column output
+ *        Then drive the column represented by `c`
  *
- * @param pin_num   : Pin number in GPIO B to be read
- * @return int32_t  : 1: the pin is high; 0: the pin is low
+ * @param c
  */
-int32_t readpin(int32_t pin_num) {
-    int32_t output = GPIOB->IDR & (0x1 << pin_num);
-
-    return output >> pin_num;
-}
-
-/**
- * @brief Control LEDs with buttons
- *        Use PB0 value for PB8
- *        Use PB4 value for PB9
- *
- */
-void buttons(void) {
-    // Use the implemented subroutines
-    // Read button input at PB0
-    // Put the PB0 value as output for PB8
-    // Read button input at PB4
-    // Put the PB4 value as output for PB9hel
-    setn(8, readpin(0));
-    setn(9, readpin(4));
+void drive_column(int c) {
+//    GPIOC->BRR = 0x000000F0;
+//    GPIOC->BSRR |= 0x0010 << (c & 0b11);
+	GPIOC->ODR &= 0x0000;
+	GPIOC->ODR |= 0x0001 << (c+4);
 }
 
 /**
- * @brief Control LEDs with keypad
+ * @brief Read the rows value of the keypad
  *
+ * @return int
  */
-void keypad(void) {
-    for(int i = 1; i <= 4; i++) {
-        GPIOC->ODR &= 0x0000;
-        GPIOC->ODR |= 0x0001 << (i+3);
-        mysleep();
-        //setn(i+7, GPIOC->IDR & 0xF);// << (i-1));
-        int rows = GPIOC->IDR & 0xF;
-        if(rows == 0x8) {
-        	GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 3)];
-		}
-		else if(rows == 0x4) {
-			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 2)];
-		}
-		else if(rows == 0x2) {
-			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 1)];
-		}
-		else if(rows == 0x1) {
-			GPIOB->ODR |= keymap_arr[(((4 - i) & 0b11)*4 + 0)];
-		}
-    }
-
-
-
-    //(4-i)
+int read_rows() {
+    return GPIOC->IDR & 0xF;
 }
-
-
-void setup_tim2(void) {
-	//Setting up timer
-	//Currently using TIM2 because pins PA1 - PA3
-
-	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN; //Initialize pins
-	GPIOA -> MODER &= ~0x000000FC;
-	GPIOA -> MODER |= 0x000000A8;
-	GPIOA -> AFR[0] &= ~0xFF000000;
-	GPIOA -> AFR[1] &= ~0x000000FF;
-	//Setting the clock down
-	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-	TIM2 -> PSC = 47999; //Clock is now at 1 MHz
-	TIM2 -> ARR = 999; //Sets clock to 1 hertz
-
-	TIM2 -> CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
-	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
-
-	TIM2 -> CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
-
-	// TODO: Enable TIM3 counter
-	TIM2->CR1 |= TIM_CR1_CEN;
-
-	TIM2->CCR1 = 800;
-	TIM2->CCR2 = 400;
-	TIM2->CCR3 = 200;
-	TIM2->CCR4 = 100;
-
-}
-
-
 
 /**
  * @brief Convert the pressed key to character
@@ -208,19 +166,146 @@ void setup_tim2(void) {
  * @param rows
  * @return char
  */
-//char rows_to_key(int rows) {
-//    if(rows == 0x8) {
-//        return keymap_arr[((col & 0b11)*4 + 3)];
-//    }
-//    else if(rows == 0x4) {
-//        return keymap_arr[((col & 0b11)*4 + 2)];
-//    }
-//    else if(rows == 0x2) {
-//        return keymap_arr[((col & 0b11)*4 + 1)];
-//    }
-//    else if(rows == 0x1) {
-//        return keymap_arr[((col & 0b11)*4 + 0)];
-//    }
-//}
+char rows_to_key(int rows) {
+    if(rows == 0x8) {
+        return keymap_arr[((col & 0b11)*4 + 3)];
+    }
+    else if(rows == 0x4) {
+        return keymap_arr[((col & 0b11)*4 + 2)];
+    }
+    else if(rows == 0x2) {
+        return keymap_arr[((col & 0b11)*4 + 1)];
+    }
+    else if(rows == 0x1) {
+        return keymap_arr[((col & 0b11)*4 + 0)];
+    }
+    return '0';
+}
+
+/**
+ * @brief Setup timer 7 as described in lab handout
+ *
+ */
+void setup_tim7() {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+    TIM7->PSC = 4799;
+    TIM7->ARR = 9;
+    TIM7->DIER |= TIM_DIER_UIE;
+    TIM7->CR1 |= TIM_CR1_CEN;
+    NVIC->ISER[0] |= 0xffffffff;
+}
+
+//-------------------------------
+// Timer 7 ISR goes here
+//-------------------------------
+// TODO
+
+void TIM7_IRQHandler(){
+    TIM7->SR = ~TIM_SR_UIF;
+    int rows = read_rows();
+    char key = 0x00;
+    if(rows != 0) {
+        key = rows_to_key(rows);
+    }
+    setn(8);
+    col++;
+    if(col >= 5) {
+        col = 0;
+    }
+    drive_column(col);
+}
+
+
+
+//===========================================================================
+// 4.4 SPI OLED Display
+//===========================================================================
+void init_spi1() {
+    // PA5  SPI1_SCK
+    // PA6  SPI1_MISO
+    // PA7  SPI1_MOSI
+    // PA15 SPI1_NSS (CS pin)
+
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+
+    GPIOA->MODER &= ~0xC000FC00;
+    GPIOA->MODER |= 0x8000A800;
+
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    GPIOA->AFR[0] &= ~0xFFF00000;
+    GPIOA->AFR[1] &= ~0xF0000000;
+
+    SPI1->CR1 &= ~SPI_CR1_SPE;  // disable spe
+    SPI1->CR1 |= SPI_CR1_BR;
+
+    SPI1->CR2 = SPI_CR2_DS_3 | SPI_CR2_DS_0;
+
+    SPI1->CR1 |= SPI_CR1_MSTR;
+    SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_NSSP;
+    SPI1->CR2 |= SPI_CR2_TXDMAEN;
+    SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
+
+}
+
+void spi_cmd(unsigned int data) {
+    while(!(SPI1->SR & SPI_SR_TXE)) {}
+    SPI1->DR = data;
+}
+void spi_data(unsigned int data) {
+    spi_cmd(data | 0x200);
+}
+void spi1_init_oled() {
+    nano_wait(1000000);
+    spi_cmd(0x38);
+    spi_cmd(0x08);
+    spi_cmd(0x01);
+    nano_wait(2000000);
+    spi_cmd(0x06);
+    spi_cmd(0x02);
+    spi_cmd(0x0c);
+}
+void spi1_display1(const char *string) {
+    spi_cmd(0x02);
+    while(*string != '\0') {
+        spi_data(*string);
+        string++;
+    }
+}
+void spi1_display2(const char *string) {
+    spi_cmd(0xc0);
+    while(*string != '\0') {
+        spi_data(*string);
+        string++;
+    }
+}
+
+
+
+//===========================================================================
+// Configure the proper DMA channel to be triggered by SPI1_TX.
+// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
+//===========================================================================
+void spi1_setup_dma(void) {
+    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
+    DMA1_Channel3->CMAR = (uint32_t) display;///////////////////////// address?
+    DMA1_Channel3->CNDTR = 34;
+    DMA1_Channel3->CCR |= DMA_CCR_DIR;
+    DMA1_Channel3->CCR |= DMA_CCR_MINC;
+    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
+    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
+    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
+    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
+
+}
+
+//===========================================================================
+// Enable the DMA channel triggered by SPI1_TX.
+//===========================================================================
+void spi1_enable_dma(void) {
+    DMA1_Channel3->CCR |= DMA_CCR_EN;
+}
+
 
 
