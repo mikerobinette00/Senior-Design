@@ -11,6 +11,7 @@
 
 #include "stm32f0xx.h"
 #include <stdint.h>
+#include "lcd.h"  // library provided by Niraj Menon for driving LCD display
 
 uint8_t col = 0;
 
@@ -51,7 +52,7 @@ char rows_to_key(int rows);
 void setup_tim7();
 void TIM7_IRQHandler();
 
-void init_spi1();
+void init_spi1_slow();
 void spi_cmd(unsigned int data);
 void spi_data(unsigned int data);
 void spi1_init_oled();
@@ -67,26 +68,19 @@ void mysleep(void) {
 int main(void) {
     init_pins();
     setup_tim7();
+    init_spi1_slow();
+    LCD_Setup();  // function from lcd.c
 
-    // SPI OLED direct drive
-    #define SPI_OLED
-    #if defined(SPI_OLED)
-    init_spi1();
-    spi1_init_oled();
-    spi1_display1("Hello again,");
-    spi1_display2(login);
+    LCD_Reset(); // function from lcd.c
+    LCD_Clear(RED); // function from lcd.c
 
-    #endif
+    //LCD_DrawLine(0,0,200,200, GREEN);
 
-    // SPI
-    //#define SPI_OLED_DMA
-    #if defined(SPI_OLED_DMA)
-    init_spi1();
-    spi1_init_oled();
-    spi1_setup_dma();
-    spi1_enable_dma();
-    #endif
-    for(;;);
+
+
+    for(;;) {
+    	LCD_WR_DATA('1');
+    }
 }
 
 /**
@@ -100,14 +94,23 @@ int main(void) {
  *
  */
 void init_pins() {
+
+    // hijacked these pins for spi display due to instructions from niraj
+    //GPIOB->MODER &= ~0x00ff0000;
+    //GPIOB->MODER |= 0x00550000; // output pb11-pb8
+
+    //GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
+
+	// PB8 SPI1_NSS (CS pin)
+	// PB11 nRESET
+	// PB14 DC
+    // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+    GPIOB->MODER &= ~0x30C30000;
+    GPIOC->MODER |= 0x10410000;
+
+    // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-
-    GPIOB->MODER &= ~0x00ff0000;
-    GPIOB->MODER |= 0x00550000; // output pb11-pb8
-
-    GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
-
     GPIOC->MODER &= 0xffff0000; //reset ports C0-C7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
     GPIOC->MODER |= 0x00005500; // output pc7-pc4
 
@@ -206,7 +209,7 @@ void TIM7_IRQHandler(){
     if(rows != 0) {
         key = rows_to_key(rows);
     }
-    setn(8);
+    setn(key);
     col++;
     if(col >= 5) {
         col = 0;
@@ -219,31 +222,44 @@ void TIM7_IRQHandler(){
 //===========================================================================
 // 4.4 SPI OLED Display
 //===========================================================================
-void init_spi1() {
-    // PA5  SPI1_SCK
-    // PA6  SPI1_MISO
-    // PA7  SPI1_MOSI
-    // PA15 SPI1_NSS (CS pin)
+void init_spi1_slow() {
+    // PB3 SPI1_SCK
+    // PB5 SPI1_MOSI
+    // PB8 SPI1_NSS (CS pin)
+	// PB11 nRESET
+	// PB14 DC
 
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 
-    GPIOA->MODER &= ~0xC000FC00;
-    GPIOA->MODER |= 0x8000A800;
+    // PB3, 5 as alternate functions (PB3: SCK) (PB5: MOSI)
+    GPIOB->MODER &= ~0x00000CC0;
+    GPIOB->MODER |= 0x00000880;
 
+    // set AFR for pins PB3,5: (PB3:SCK:AF0) (PB5:MOSI:AF0)
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
-    GPIOA->AFR[0] &= ~0xFFF00000;
-    GPIOA->AFR[1] &= ~0xF0000000;
+    GPIOB->AFR[0] &= ~0x00F0F000;
 
-    SPI1->CR1 &= ~SPI_CR1_SPE;  // disable spe
-    SPI1->CR1 |= SPI_CR1_BR;
+    // disable spi channel
+    SPI1->CR1 &= ~SPI_CR1_SPE;
 
-    SPI1->CR2 = SPI_CR2_DS_3 | SPI_CR2_DS_0;
+    // set baud rate divisor to max value to make baud rate as low as possible?
+    SPI1->CR1 |= SPI_CR1_BR;// | SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2;
 
+    // set master mode
     SPI1->CR1 |= SPI_CR1_MSTR;
-    SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_NSSP;
-    SPI1->CR2 |= SPI_CR2_TXDMAEN;
-    SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
 
+    // set word (data) size to 8-bit
+    // just removed SPI_CR2_DS from right hand side and changed '|=' to '='
+    SPI1->CR2 = SPI_CR2_DS_3;
+
+    // configure "software slave management" and "internal slave select"
+    SPI1->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
+
+    // set the "FIFO reception threshold" bit in CR2 so that the SPI channel immediately releases a received 8-bit value
+    SPI1->CR2 |= SPI_CR2_FRXTH;
+
+    // enable SPI channel
+    SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
 }
 
 void spi_cmd(unsigned int data) {

@@ -1,4 +1,4 @@
-src/main.o: ../src/main.c \
+src/lcd.o: ../src/lcd.c \
  //NAS01.ITAP.PURDUE.EDU/puhome/My\ Documents/GitHub/Senior-Design/CMSIS/device/stm32f0xx.h \
  //NAS01.ITAP.PURDUE.EDU/puhome/My\ Documents/GitHub/Senior-Design/CMSIS/core/core_cm0.h \
  //NAS01.ITAP.PURDUE.EDU/puhome/My\ Documents/GitHub/Senior-Design/CMSIS/core/core_cmInstr.h \
