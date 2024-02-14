@@ -76,7 +76,6 @@ int main(void) {
     spi1_display1("Hello again,");
     spi1_display2(login);
 
-    spi_data('hello');
     #endif
 
     // SPI
