@@ -79,6 +79,9 @@ int main(void) {
     //LCD_Reset(); // function from lcd.c
     LCD_Clear(RED); // function from lcd.c setting display to cyan
 
+    LCD_DrawString(0,0,GREEN, BLUE, "I no longer want", 16, 0);
+    LCD_DrawString(0,16,GREEN, BLUE, "to kill myself", 16, 0);
+
     //LCD_DrawLine(0,0,200,200, GREEN);
 
 
