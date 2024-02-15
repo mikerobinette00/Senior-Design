@@ -112,12 +112,12 @@ void init_pins() {
 	// PB14 DC
     // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-//    GPIOB->MODER &= ~0x30C30000;
-//    GPIOC->MODER |= 0x10410000;
+    GPIOB->MODER &= ~0x30C30000;
+    GPIOC->MODER |= 0x10410000;
 
-    // removing pb8 as generic output
-    GPIOB->MODER &= ~0x30C00000;
-	GPIOC->MODER |= 0x10400000;
+//    // removing pb8 as generic output
+//    GPIOB->MODER &= ~0x30C00000;
+//	GPIOC->MODER |= 0x10400000;
 
     // initialize nss to high
     //GPIOB->ODR &= ~0x00000100;
@@ -375,4 +375,3 @@ void tim2_PWM(void) {
 	TIM2 -> CCR3 = 200;
 	TIM2 -> CCR4 = 100;
 }
-

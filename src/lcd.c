@@ -76,9 +76,8 @@ void LCD_Reset(void)
     nano_wait(50000000);  // Wait
 }
 
-// If you want to try the slower version of SPI,
+// If you want to try the slower version of SPI, #define SLOW_SPI
 //#define SLOW_SPI
-
 #if defined(SLOW_SPI)
 
 // What GPIO port and SPI channel are we using here?

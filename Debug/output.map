@@ -4822,12 +4822,12 @@ OUTPUT(Senior_Design.elf elf32-littlearm)
  .debug_macro   0x00001f15       0x88 src/syscalls.o
  .debug_macro   0x00001f9d      0x189 src/system_stm32f0xx.o
 
-.debug_line     0x00000000     0x2125
+.debug_line     0x00000000     0x2127
  .debug_line    0x00000000      0xc89 src/lcd.o
- .debug_line    0x00000c89      0x7e0 src/main.o
- .debug_line    0x00001469      0x5df src/syscalls.o
- .debug_line    0x00001a48      0x661 src/system_stm32f0xx.o
- .debug_line    0x000020a9       0x7c startup/startup_stm32.o
+ .debug_line    0x00000c89      0x7e2 src/main.o
+ .debug_line    0x0000146b      0x5df src/syscalls.o
+ .debug_line    0x00001a4a      0x661 src/system_stm32f0xx.o
+ .debug_line    0x000020ab       0x7c startup/startup_stm32.o
 
 .debug_str      0x00000000    0x50345
  .debug_str     0x00000000    0x4ef81 src/lcd.o
