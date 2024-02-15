@@ -57,14 +57,14 @@ char rows_to_key(int rows);
 void setup_tim7();
 void TIM7_IRQHandler();
 
-void init_spi2_slow();
-void spi_cmd(unsigned int data);
-void spi_data(unsigned int data);
-void spi1_init_oled();
-void spi1_display1(const char *string);
-void spi1_display2(const char *string);
-void spi1_setup_dma(void);
-void spi1_enable_dma(void);
+void init_spi1_slow();
+//void spi_cmd(unsigned int data);
+//void spi_data(unsigned int data);
+//void spi1_init_oled();
+//void spi1_display1(const char *string);
+//void spi1_display2(const char *string);
+//void spi1_setup_dma(void);
+//void spi1_enable_dma(void);
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
@@ -73,17 +73,20 @@ void mysleep(void) {
 int main(void) {
     init_pins();
     setup_tim7();
-    init_spi2_slow();
+    init_spi1_slow();
     LCD_Setup();  // function from lcd.c
 
     LCD_Reset(); // function from lcd.c
-    LCD_Clear(0x7FFF); // function from lcd.c setting display to cyan
+    LCD_Clear(RED); // function from lcd.c setting display to cyan
 
     //LCD_DrawLine(0,0,200,200, GREEN);
 
 
 
     for(;;);
+    //	LCD_Clear(0x7FFF); // function from lcd.c setting display to cyan
+    //}
+
 }
 
 /**
@@ -109,12 +112,16 @@ void init_pins() {
 	// PB14 DC
     // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER &= ~0x30C30000;
-    GPIOC->MODER |= 0x10410000;
+//    GPIOB->MODER &= ~0x30C30000;
+//    GPIOC->MODER |= 0x10410000;
+
+    // removing pb8 as generic output
+    GPIOB->MODER &= ~0x30C00000;
+	GPIOC->MODER |= 0x10400000;
 
     // initialize nss to high
-    GPIOB->ODR &= ~0x00000100;
-    GPIOB->ODR |= 0x00000100;
+    //GPIOB->ODR &= ~0x00000100;
+    //GPIOB->ODR |= 0x00000100;
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -229,14 +236,15 @@ void TIM7_IRQHandler(){
 //===========================================================================
 // 4.4 SPI OLED Display
 //===========================================================================
-void init_spi2_slow() {
-    // PB3 SPI2_SCK
-    // PB5 SPI2_MOSI
-    // PB8 SPI2_NSS (CS pin)
-	// PB11 nRESET
-	// PB14 DC
+void init_spi1_slow() {
+    // PB3 SPI1_SCK
+    // PB5 SPI1_MOSI
+    // PB8 Generic output//SPI2_NSS (CS pin)
+	// PB11 Generic output//nRESET
+	// PB14 Generic output//DC
 
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
     // PB3, 5 as alternate functions (PB3: SCK) (PB5: MOSI)
     GPIOB->MODER &= ~0x00000CC0;
@@ -246,96 +254,95 @@ void init_spi2_slow() {
     //GPIOB->ODR &= ~0x00000008;
 
     // set AFR for pins PB3,5: (PB3:SCK:AF0) (PB5:MOSI:AF0)
-    RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
     GPIOB->AFR[0] &= ~0x00F0F000;
 
     // disable spi channel
-    SPI2->CR1 &= ~SPI_CR1_SPE;
+    SPI1->CR1 &= ~SPI_CR1_SPE;
 
     // set baud rate divisor to max value to make baud rate as low as possible?
-    //SPI2->CR1 |= SPI_CR1_BR_0 | SPI_CR1_BR_1;//SPI_CR1_BR;// | SPI_CR1_BR_0;// | SPI_CR1_BR_1 | SPI_CR1_BR_2;
-    SPI2->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
-    //SPI2->CR1 |= SPI_CR1_BR_0;
+    // set baud bits to 000
+    SPI1->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
 
     // set master mode
-    SPI2->CR1 |= SPI_CR1_MSTR;
+    SPI1->CR1 |= SPI_CR1_MSTR;
 
     // set word (data) size to 8-bit
-    // just removed SPI_CR2_DS from right hand side and changed '|=' to '='
-    //SPI2->CR2 = 0x0000;// SPI_CR2_DS_3;
-    SPI2->CR2 |= SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
-    SPI2->CR2 &= ~(SPI_CR2_DS_3);
-    //SPI2->CR2 = SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
+    // set data bits to 0111
+    SPI1->CR2 |= SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
+    SPI1->CR2 &= ~(SPI_CR2_DS_3);
+
+    // setting up output enable (SSOE) and setting up enable bit and enabling NSSP (NSSP)
+    SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_NSSP;
 
     // configure "software slave management" and "internal slave select"
-    SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
+    SPI1->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
     // set the "FIFO reception threshold" bit in CR2 so that the SPI channel immediately releases a received 8-bit value
-    SPI2->CR2 |= SPI_CR2_FRXTH;
+    SPI1->CR2 |= SPI_CR2_FRXTH;
 
     // enable SPI channel
-    SPI2->CR1 |= SPI_CR1_SPE;  // enable spe
+    SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
 }
 
-void spi_cmd(unsigned int data) {
-    while(!(SPI1->SR & SPI_SR_TXE)) {}
-    SPI1->DR = data;
-}
-void spi_data(unsigned int data) {
-    spi_cmd(data | 0x200);
-}
-void spi1_init_oled() {
-    nano_wait(1000000);
-    spi_cmd(0x38);
-    spi_cmd(0x08);
-    spi_cmd(0x01);
-    nano_wait(2000000);
-    spi_cmd(0x06);
-    spi_cmd(0x02);
-    spi_cmd(0x0c);
-}
-void spi1_display1(const char *string) {
-    spi_cmd(0x02);
-    while(*string != '\0') {
-        spi_data(*string);
-        string++;
-    }
-}
-void spi1_display2(const char *string) {
-    spi_cmd(0xc0);
-    while(*string != '\0') {
-        spi_data(*string);
-        string++;
-    }
-}
-
-
-
-//===========================================================================
-// Configure the proper DMA channel to be triggered by SPI1_TX.
-// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
-//===========================================================================
-void spi1_setup_dma(void) {
-    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
-    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
-    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
-    DMA1_Channel3->CMAR = (uint32_t) display;///////////////////////// address?
-    DMA1_Channel3->CNDTR = 34;
-    DMA1_Channel3->CCR |= DMA_CCR_DIR;
-    DMA1_Channel3->CCR |= DMA_CCR_MINC;
-    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
-    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
-    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
-    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
-
-}
-
-//===========================================================================
-// Enable the DMA channel triggered by SPI1_TX.
-//===========================================================================
-void spi1_enable_dma(void) {
-    DMA1_Channel3->CCR |= DMA_CCR_EN;
-}
+//void spi_cmd(unsigned int data) {
+//    while(!(SPI1->SR & SPI_SR_TXE)) {}
+//    SPI1->DR = data;
+//}
+//void spi_data(unsigned int data) {
+//    spi_cmd(data | 0x200);
+//}
+//void spi1_init_oled() {
+//    nano_wait(1000000);
+//    spi_cmd(0x38);
+//    spi_cmd(0x08);
+//    spi_cmd(0x01);
+//    nano_wait(2000000);
+//    spi_cmd(0x06);
+//    spi_cmd(0x02);
+//    spi_cmd(0x0c);
+//}
+//void spi1_display1(const char *string) {
+//    spi_cmd(0x02);
+//    while(*string != '\0') {
+//        spi_data(*string);
+//        string++;
+//    }
+//}
+//void spi1_display2(const char *string) {
+//    spi_cmd(0xc0);
+//    while(*string != '\0') {
+//        spi_data(*string);
+//        string++;
+//    }
+//}
+//
+//
+//
+////===========================================================================
+//// Configure the proper DMA channel to be triggered by SPI1_TX.
+//// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
+////===========================================================================
+//void spi1_setup_dma(void) {
+//    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+//    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+//    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
+//    DMA1_Channel3->CMAR = (uint32_t) display;///////////////////////// address?
+//    DMA1_Channel3->CNDTR = 34;
+//    DMA1_Channel3->CCR |= DMA_CCR_DIR;
+//    DMA1_Channel3->CCR |= DMA_CCR_MINC;
+//    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
+//    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
+//    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
+//    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
+//
+//}
+//
+////===========================================================================
+//// Enable the DMA channel triggered by SPI1_TX.
+////===========================================================================
+//void spi1_enable_dma(void) {
+//    DMA1_Channel3->CCR |= DMA_CCR_EN;
+//}
 
 
 void tim2_PWM(void) {
