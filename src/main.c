@@ -78,9 +78,7 @@ int main(void) {
 
 
 
-    for(;;) {
-    	LCD_WR_DATA('1');
-    }
+    for(;;);
 }
 
 /**
