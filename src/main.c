@@ -11,7 +11,9 @@
 
 #include "stm32f0xx.h"
 #include <stdint.h>
-#include "lcd.h"  // library provided by Niraj Menon for driving LCD display
+//#include "lcd.h"  // library provided by Niraj Menon for driving LCD display
+
+void internal_clock();
 
 uint8_t col = 0;
 
@@ -72,7 +74,7 @@ int main(void) {
     LCD_Setup();  // function from lcd.c
 
     LCD_Reset(); // function from lcd.c
-    LCD_Clear(RED); // function from lcd.c
+    LCD_Clear(0x7FFF); // function from lcd.c setting display to cyan
 
     //LCD_DrawLine(0,0,200,200, GREEN);
 
@@ -257,9 +259,9 @@ void init_spi2_slow() {
     // set word (data) size to 8-bit
     // just removed SPI_CR2_DS from right hand side and changed '|=' to '='
     //SPI2->CR2 = 0x0000;// SPI_CR2_DS_3;
-    //SPI2->CR2 |= SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
-    //SPI2->CR2 &= ~(SPI_CR2_DS_3);
-    SPI2->CR2 = SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
+    SPI2->CR2 |= SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
+    SPI2->CR2 &= ~(SPI_CR2_DS_3);
+    //SPI2->CR2 = SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
 
     // configure "software slave management" and "internal slave select"
     SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
