@@ -72,11 +72,11 @@ void mysleep(void) {
 
 int main(void) {
     init_pins();
-    setup_tim7();
+    //setup_tim7();
     init_spi1_slow();
     LCD_Setup();  // function from lcd.c
 
-    LCD_Reset(); // function from lcd.c
+    //LCD_Reset(); // function from lcd.c
     LCD_Clear(RED); // function from lcd.c setting display to cyan
 
     //LCD_DrawLine(0,0,200,200, GREEN);
@@ -113,7 +113,7 @@ void init_pins() {
     // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     GPIOB->MODER &= ~0x30C30000;
-    GPIOC->MODER |= 0x10410000;
+    GPIOB->MODER |= 0x10410000;
 
 //    // removing pb8 as generic output
 //    GPIOB->MODER &= ~0x30C00000;
@@ -239,7 +239,7 @@ void TIM7_IRQHandler(){
 void init_spi1_slow() {
     // PB3 SPI1_SCK
     // PB5 SPI1_MOSI
-    // PB8 Generic output//SPI2_NSS (CS pin)
+    // PB8 Generic output//CS NSS
 	// PB11 Generic output//nRESET
 	// PB14 Generic output//DC
 
@@ -262,6 +262,7 @@ void init_spi1_slow() {
     // set baud rate divisor to max value to make baud rate as low as possible?
     // set baud bits to 000
     SPI1->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
+    SPI1->CR1 |= SPI_CR1_BR_0;
 
     // set master mode
     SPI1->CR1 |= SPI_CR1_MSTR;
@@ -272,7 +273,7 @@ void init_spi1_slow() {
     SPI1->CR2 &= ~(SPI_CR2_DS_3);
 
     // setting up output enable (SSOE) and setting up enable bit and enabling NSSP (NSSP)
-    SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_NSSP;
+    //SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_NSSP;
 
     // configure "software slave management" and "internal slave select"
     SPI1->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
