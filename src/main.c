@@ -52,7 +52,7 @@ char rows_to_key(int rows);
 void setup_tim7();
 void TIM7_IRQHandler();
 
-void init_spi1_slow();
+void init_spi2_slow();
 void spi_cmd(unsigned int data);
 void spi_data(unsigned int data);
 void spi1_init_oled();
@@ -68,7 +68,7 @@ void mysleep(void) {
 int main(void) {
     init_pins();
     setup_tim7();
-    init_spi1_slow();
+    init_spi2_slow();
     LCD_Setup();  // function from lcd.c
 
     LCD_Reset(); // function from lcd.c
@@ -108,6 +108,10 @@ void init_pins() {
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     GPIOB->MODER &= ~0x30C30000;
     GPIOC->MODER |= 0x10410000;
+
+    // initialize nss to high
+    GPIOB->ODR &= ~0x00000100;
+    GPIOB->ODR |= 0x00000100;
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -222,10 +226,10 @@ void TIM7_IRQHandler(){
 //===========================================================================
 // 4.4 SPI OLED Display
 //===========================================================================
-void init_spi1_slow() {
-    // PB3 SPI1_SCK
-    // PB5 SPI1_MOSI
-    // PB8 SPI1_NSS (CS pin)
+void init_spi2_slow() {
+    // PB3 SPI2_SCK
+    // PB5 SPI2_MOSI
+    // PB8 SPI2_NSS (CS pin)
 	// PB11 nRESET
 	// PB14 DC
 
@@ -235,31 +239,34 @@ void init_spi1_slow() {
     GPIOB->MODER &= ~0x00000CC0;
     GPIOB->MODER |= 0x00000880;
 
+    // initialize sck to low
+    //GPIOB->ODR &= ~0x00000008;
+
     // set AFR for pins PB3,5: (PB3:SCK:AF0) (PB5:MOSI:AF0)
-    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
     GPIOB->AFR[0] &= ~0x00F0F000;
 
     // disable spi channel
-    SPI1->CR1 &= ~SPI_CR1_SPE;
+    SPI2->CR1 &= ~SPI_CR1_SPE;
 
     // set baud rate divisor to max value to make baud rate as low as possible?
-    SPI1->CR1 |= SPI_CR1_BR;// | SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2;
+    SPI2->CR1 |= SPI_CR1_BR;// | SPI_CR1_BR_0;// | SPI_CR1_BR_1 | SPI_CR1_BR_2;
 
     // set master mode
-    SPI1->CR1 |= SPI_CR1_MSTR;
+    SPI2->CR1 |= SPI_CR1_MSTR;
 
     // set word (data) size to 8-bit
     // just removed SPI_CR2_DS from right hand side and changed '|=' to '='
-    SPI1->CR2 = SPI_CR2_DS_3;
+    SPI2->CR2 = 0x0000;// SPI_CR2_DS_3;
 
     // configure "software slave management" and "internal slave select"
-    SPI1->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
+    SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
 
     // set the "FIFO reception threshold" bit in CR2 so that the SPI channel immediately releases a received 8-bit value
-    SPI1->CR2 |= SPI_CR2_FRXTH;
+    SPI2->CR2 |= SPI_CR2_FRXTH;
 
     // enable SPI channel
-    SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
+    SPI2->CR1 |= SPI_CR1_SPE;  // enable spe
 }
 
 void spi_cmd(unsigned int data) {
