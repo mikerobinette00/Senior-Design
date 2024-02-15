@@ -249,13 +249,17 @@ void init_spi2_slow() {
 
     // set baud rate divisor to max value to make baud rate as low as possible?
     SPI2->CR1 |= SPI_CR1_BR;// | SPI_CR1_BR_0;// | SPI_CR1_BR_1 | SPI_CR1_BR_2;
+    //SPI2->CR1 |= SPI_CR1_BR_0;
 
     // set master mode
     SPI2->CR1 |= SPI_CR1_MSTR;
 
     // set word (data) size to 8-bit
     // just removed SPI_CR2_DS from right hand side and changed '|=' to '='
-    SPI2->CR2 = 0x0000;// SPI_CR2_DS_3;
+    //SPI2->CR2 = 0x0000;// SPI_CR2_DS_3;
+    //SPI2->CR2 |= SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
+    //SPI2->CR2 &= ~(SPI_CR2_DS_3);
+    SPI2->CR2 = SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
 
     // configure "software slave management" and "internal slave select"
     SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
