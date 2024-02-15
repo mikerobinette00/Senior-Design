@@ -50,6 +50,7 @@ char rows_to_key(int rows);
 //void handle_key(char key);
 void setup_tim7();
 void TIM7_IRQHandler();
+void tim2_PWM(void);
 
 void init_spi1();
 void spi_cmd(unsigned int data);
@@ -86,7 +87,15 @@ int main(void) {
     spi1_setup_dma();
     spi1_enable_dma();
     #endif
+
+	#define TIM2_PWM
+	#if defined(TIM2_PWM)
+	tim2_PWM();
+	#endif
+
     for(;;);
+
+
 }
 
 /**
@@ -333,7 +342,7 @@ void tim2_PWM(void) {
 	TIM2 -> CR1 |= TIM_CR1_CEN;
 
 	//Determines the duty cycle
-	TIM2 -> CCR2 = 400;
+	TIM2 -> CCR2 = 800;
 	TIM2 -> CCR3 = 200;
 	TIM2 -> CCR4 = 100;
 }
