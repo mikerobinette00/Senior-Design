@@ -11,9 +11,12 @@
 
 #include "stm32f0xx.h"
 #include <stdint.h>
-//#include "lcd.h"  // library provided by Niraj Menon for driving LCD display
+#include "lcd.h"  // library provided by Niraj Menon for driving LCD display
+//#include "clock.c"
 
-void internal_clock();
+void LCD_Reset(void);
+void LCD_Setup();
+void LCD_Clear(u16 Color);
 
 uint8_t col = 0;
 
@@ -250,7 +253,8 @@ void init_spi2_slow() {
     SPI2->CR1 &= ~SPI_CR1_SPE;
 
     // set baud rate divisor to max value to make baud rate as low as possible?
-    SPI2->CR1 |= SPI_CR1_BR;// | SPI_CR1_BR_0;// | SPI_CR1_BR_1 | SPI_CR1_BR_2;
+    //SPI2->CR1 |= SPI_CR1_BR_0 | SPI_CR1_BR_1;//SPI_CR1_BR;// | SPI_CR1_BR_0;// | SPI_CR1_BR_1 | SPI_CR1_BR_2;
+    SPI2->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
     //SPI2->CR1 |= SPI_CR1_BR_0;
 
     // set master mode
