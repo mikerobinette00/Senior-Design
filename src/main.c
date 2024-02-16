@@ -17,6 +17,9 @@
 void LCD_Reset(void);
 void LCD_Setup();
 void LCD_Clear(u16 Color);
+void LCD_DrawString(u16 x,u16 y, u16 fc, u16 bg, const char *p, u8 size, u8 mode);
+
+uint8_t num_char = 0;
 
 uint8_t col = 0;
 
@@ -48,7 +51,7 @@ uint16_t display[34] = {
 };
 
 void init_pins();
-void setn(char val);
+//void setn(char val);
 
 void drive_column(int c);
 int read_rows();
@@ -72,15 +75,24 @@ void mysleep(void) {
 
 int main(void) {
     init_pins();
-    //setup_tim7();
+    setup_tim7();
     init_spi1_slow();
     LCD_Setup();  // function from lcd.c
+    LCD_Clear(0xFFFF);
+
+
+    //LCD_DrawString(0,0, BLACK, WHITE, "what the fuck", 16, 0);
+
+
+
+
+
 
     //LCD_Reset(); // function from lcd.c
-    LCD_Clear(RED); // function from lcd.c setting display to cyan
+    //LCD_Clear(RED); // function from lcd.c setting display to cyan
 
-    LCD_DrawString(0,0,GREEN, BLUE, "I no longer want", 16, 0);
-    LCD_DrawString(0,16,GREEN, BLUE, "to kill myself", 16, 0);
+    //LCD_DrawString(0,0,GREEN, BLUE, "I no longer want", 16, 0);
+    //LCD_DrawString(0,16,GREEN, BLUE, "to kill myself", 16, 0);
 
     //LCD_DrawLine(0,0,200,200, GREEN);
 
@@ -142,15 +154,15 @@ void init_pins() {
  * @param val    : Pin value, if 0 then the
  *                 pin is set low, else set high
  */
-void setn(char val) {
-
-    if(val != 0) {
-    	GPIOB->ODR |= val << 8;
-    }
-    else {
-        GPIOB->ODR &= ~(0xF << 8);
-    }
-}
+//void setn(char val) {
+//
+//    if(val != 0) {
+//    	GPIOB->ODR |= val << 8;
+//    }
+//    else {
+//        GPIOB->ODR &= ~(0xF << 8);
+//    }
+//}
 
 
 /**
@@ -218,15 +230,18 @@ void setup_tim7() {
 // Timer 7 ISR goes here
 //-------------------------------
 // TODO
-
+// void LCD_DrawChar(u16 x,u16 y,u16 fc, u16 bc, char num, u8 size, u8 mode
 void TIM7_IRQHandler(){
     TIM7->SR = ~TIM_SR_UIF;
     int rows = read_rows();
     char key = 0x00;
     if(rows != 0) {
         key = rows_to_key(rows);
+        LCD_DrawString(num_char * 16,0, BLACK, WHITE, &key, 16, 0);
+        num_char += 1;
     }
-    setn(key);
+    //setn(key);
+
     col++;
     if(col >= 5) {
         col = 0;
