@@ -97,3 +97,16 @@ int read_rows()
     return (~GPIOC->IDR) & 0xf;
 }
 
+
+void printfloat(float f)
+{
+    char buf[10];
+    sprintf(buf, 10, "%f", f);
+    for(int i=1; i<10; i++) {
+        if (buf[i] == '.') {
+            // Combine the decimal point into the previous digit.
+            buf[i-1] |= 0x80;
+            memcpy(&buf[i], &buf[i+1], 10-i-1);
+        }
+    }
+}

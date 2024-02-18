@@ -43,7 +43,7 @@ uint8_t row_inc = 0;
 uint8_t col_inc = 0;
 
 char pressed_key;
-char keypresses[5];
+char keypresses[5] = {"00000"};
 
 char *data_fields[] = {
 		"Rated Motor Voltage", "", "", "00.00",
@@ -56,6 +56,7 @@ int motor_des_speed = 0;
 
 int updated_value = 0;
 
+int live_speed_reading = 2400;
 
 void init_display_fields(char *data_fields_arr[]);
 void update_display_field(char *updated_string);
@@ -68,7 +69,7 @@ void init_pins();
 void drive_column(int c);
 int read_rows();
 
-void tim2_PWM(void);
+//void tim2_PWM(void);
 
 /* debouncing functions begin */
 void update_history(int c, int rows);
@@ -77,13 +78,18 @@ char get_keypress(void);
 
 void init_spi1();
 
+
+void setup_adc(void);
+void TIM2_IRQHandler();
+void init_tim2(void);
+
 /* interrupts begin */
 
 void setup_tim7();
 void TIM7_IRQHandler();
 
-//void SysTick_Handler();
-//void init_systick();
+void SysTick_Handler();
+void init_systick();
 
 /* interrupts end */
 
@@ -104,6 +110,11 @@ int main(void) {
     init_pins();
     setup_tim7();
     init_spi1();
+    // adc work
+    setup_adc();
+    init_tim2();
+    init_systick();
+    // end of adc work
     LCD_Setup();  // function from lcd.c
     LCD_Clear(0xFFFF);
 
@@ -113,13 +124,6 @@ int main(void) {
     {
     	pressed_key = get_keypress();
     	process_keyPress(pressed_key);
-    	char result[5];
-    	sprintf(result, "%d", motor_des_voltage);
-    	if(motor_des_voltage == 11111) {
-    		init_display_fields(data_fields);
-    	}
-
-
     }
 }
 
@@ -174,7 +178,7 @@ void process_keyPress(char key) {
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
 
 	uint8_t top_field_pos = 0;
-	uint8_t bottom_field_pos = row_inc * (num_table_rows - 1);
+	uint8_t bottom_field_pos = row_inc * (num_table_rows - 2);
 
 	switch(key) {
 	case 'A':  // up arrow
@@ -211,11 +215,17 @@ void process_keyPress(char key) {
 		draw_cursor();
 		update_display_field(keypresses);
 
-		motor_des_voltage = 0;
+		int input_value = 0;
 		int starting_power = 1;
 		for(int i = 0; i < num_digits; i++) {
-			motor_des_voltage += (keypresses[i] - '0') * (10000 / starting_power);
+			input_value += (keypresses[i] - '0') * (10000 / starting_power);
 			starting_power *= 10;
+		}
+		if((cursor_pos_row / row_inc) == 0) {
+			motor_des_voltage = input_value;
+		}
+		else if((cursor_pos_row / row_inc) == 1) {
+			motor_des_speed = input_value;
 		}
 
 		for(int i = 0; i < num_digits; i++) {
@@ -324,36 +334,102 @@ void init_spi1() {
 }
 
 
-void tim2_PWM(void) {
-	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
-	//Pinout layout: PA1-PA3
-	GPIOA -> MODER &= ~0x000000FC;
-	GPIOA -> MODER |= 0x000000A8;
+//void tim2_PWM(void) {
+//	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+//	//Pinout layout: PA1-PA3
+//	GPIOA -> MODER &= ~0x000000FC;
+//	GPIOA -> MODER |= 0x000000A8;
+//
+//	//Come back to the AFR and what it does
+//	GPIOA -> AFR[0] &= ~0x0000FFF0;
+//	GPIOA -> AFR[0] |= 0x00002220;
+//
+//	//Scaling the timer; Currently set to 1 Hz
+//	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
+//	TIM2 -> PSC = 47999;
+//	TIM2 -> ARR = 999;
+//
+//	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+//	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
+//	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
+//
+//	//Enable Output
+//	TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+//
+//	//Enable TIM2 Counter
+//	TIM2 -> CR1 |= TIM_CR1_CEN;
+//
+//	//Determines the duty cycle
+//	TIM2 -> CCR2 = 400;
+//	TIM2 -> CCR3 = 200;
+//	TIM2 -> CCR4 = 100;
+//}
 
-	//Come back to the AFR and what it does
-	GPIOA -> AFR[0] &= ~0x0000FFF0;
-	GPIOA -> AFR[0] |= 0x00002220;
 
-	//Scaling the timer; Currently set to 1 Hz
-	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-	TIM2 -> PSC = 47999;
-	TIM2 -> ARR = 999;
 
-	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
-	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
 
-	//Enable Output
-	TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
-	//Enable TIM2 Counter
-	TIM2 -> CR1 |= TIM_CR1_CEN;
+//============================================================================
+// ADC conversion
+//============================================================================
+//=============================================================================
+// Part 3: Analog-to-digital conversion for a volume level.
+//=============================================================================
+//uint32_t volume = 2400;
 
-	//Determines the duty cycle
-	TIM2 -> CCR2 = 400;
-	TIM2 -> CCR3 = 200;
-	TIM2 -> CCR4 = 100;
+
+//============================================================================
+// setup_adc()
+//============================================================================
+void setup_adc(void) {
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    GPIOA->MODER |= 0xC;
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->CR2 |= RCC_CR2_HSI14ON;
+    while(!(RCC->CR2 & RCC_CR2_HSI14RDY));
+    ADC1->CR |= ADC_CR_ADEN;
+    while(!(ADC1->ISR & ADC_ISR_ADRDY));
+
+    ADC1->CHSELR = 0;
+    ADC1->CHSELR |= 1 << 1;
 }
+
+//============================================================================
+// Varables for boxcar averaging.
+//============================================================================
+#define BCSIZE 32
+int bcsum = 0;
+int boxcar[BCSIZE];
+int bcn = 0;
+
+//============================================================================
+// Timer 2 ISR
+//============================================================================
+void TIM2_IRQHandler(){
+    TIM2->SR = ~TIM_SR_UIF;
+    ADC1->CR |= ADC_CR_ADSTART;
+    while(!(ADC1->ISR & ADC_ISR_EOC));
+
+    bcsum -= boxcar[bcn];
+    bcsum += boxcar[bcn] = ADC1->DR;
+    bcn += 1;
+    if (bcn >= BCSIZE)
+        bcn = 0;
+    live_speed_reading = bcsum / BCSIZE;
+}
+
+//============================================================================
+// init_tim2()
+//============================================================================
+void init_tim2(void) {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2->PSC = 47999;
+    TIM2->ARR = 99;
+    TIM2->DIER |= TIM_DIER_UIE;
+    TIM2->CR1 |= TIM_CR1_CEN;
+    NVIC->ISER[0] |= 0xffffffff;
+}
+
 
 
 /*
@@ -386,20 +462,30 @@ void TIM7_IRQHandler(){
     drive_column(col);
 }
 
-///**
-// * @brief The ISR for the SysTick interrupt.
-// *
-// */
-//void SysTick_Handler() {
-//
-//}
-//
-///**
-// * @brief Enable the SysTick interrupt to occur every 1/16 seconds.
-// *
-// */
-//void init_systick() {
-//    SysTick->LOAD = 0x0005B8D7;
-//    SysTick->CTRL &= ~0x00000004;
-//    SysTick->CTRL |= 0x00000003;
-//}
+/**
+ * @brief The ISR for the SysTick interrupt.
+ *
+ */
+void SysTick_Handler() {
+	char buffer[5];
+	// motor voltage
+	sprintf(buffer, "%d", motor_des_voltage);
+	LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
+	// motor speed
+	sprintf(buffer, "%d", motor_des_speed);
+	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
+	// adc reading for "motor speed"
+	sprintf(buffer, "%f", 2.95 * live_speed_reading / 4096);
+
+	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+}
+
+/**
+ * @brief Enable the SysTick interrupt to occur every 1/16 seconds.
+ *
+ */
+void init_systick() {
+    SysTick->LOAD = 0x0005B8D7;
+    SysTick->CTRL &= ~0x00000004;
+    SysTick->CTRL |= 0x00000003;
+}
