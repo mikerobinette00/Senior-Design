@@ -9,100 +9,235 @@
   ******************************************************************************
 */
 
+// various code snippets consulted and used from ece 362 lab work
+
+
 #include "stm32f0xx.h"
 #include <stdint.h>
+#include <stdio.h>
 #include "lcd.h"  // library provided by Niraj Menon for driving LCD display
-//#include "clock.c"
 
-void LCD_Reset(void);
 void LCD_Setup();
 void LCD_Clear(u16 Color);
+void LCD_DrawChar(u16 x,u16 y,u16 fc, u16 bc, char num, u8 size, u8 mode);
 void LCD_DrawString(u16 x,u16 y, u16 fc, u16 bg, const char *p, u8 size, u8 mode);
+void LCD_DrawLine(u16 x1, u16 y1, u16 x2, u16 y2, u16 c);
 
 uint8_t num_char = 0;
+uint8_t col;
 
-uint8_t col = 0;
+/* display block begin */
+const int pixel_col = 240;
+const int pixel_row = 320;
 
-// Be sure to change this to your login...
-const char login[] = "robinetm";
+const int font_size = 16;  // currently only sizes 12 and 16 supported
+const int num_digits = 5;
 
-char keymap_arr[] = "DCBA#9630852*741";
+uint16_t cursor_pos_col = 0;
+uint16_t cursor_pos_row = 0;
 
-void nano_wait(unsigned int n) {
-    asm(    "        mov r0,%0\n"
-            "repeat: sub r0,#83\n"
-            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-}
+const int num_table_rows = 3;
+const int num_table_cols = 4;
 
-//===========================================================================
-// This is the 34-entry buffer to be copied into SPI1.
-// Each element is a 16-bit value that is either character data or a command.
-// Element 0 is the command to set the cursor to the first position of line 1.
-// The next 16 elements are 16 characters.
-// Element 17 is the command to set the cursor to the first position of line 2.
-//===========================================================================
-uint16_t display[34] = {
-        0x002, // Command to set the cursor at the first position line 1
-        0x200+'E', 0x200+'C', 0x200+'E', 0x200+'3', 0x200+'6', + 0x200+'2', 0x200+' ', 0x200+'i',
-        0x200+'s', 0x200+' ', 0x200+'t', 0x200+'h', + 0x200+'e', 0x200+' ', 0x200+' ', 0x200+' ',
-        0x0c0, // Command to set the cursor at the first position line 2
-        0x200+'c', 0x200+'l', 0x200+'a', 0x200+'s', 0x200+'s', + 0x200+' ', 0x200+'f', 0x200+'o',
-        0x200+'r', 0x200+' ', 0x200+'y', 0x200+'o', + 0x200+'u', 0x200+'!', 0x200+' ', 0x200+' ',
+uint8_t row_inc = 0;
+uint8_t col_inc = 0;
+
+char pressed_key;
+char keypresses[5];
+
+char *data_fields[] = {
+		"Rated Motor Voltage", "", "", "00.00",
+		"Rated Motor Max RPM", "", "", "00000",
+		"Measured Motor RPM", "", "", "00000"
 };
 
-void init_pins();
-//void setn(char val);
+int motor_des_voltage = 0;
+int motor_des_speed = 0;
 
+int updated_value = 0;
+
+
+void init_display_fields(char *data_fields_arr[]);
+void update_display_field(char *updated_string);
+void draw_cursor();
+void erase_cursor();
+void process_keyPress(char key);
+/* display block end */
+
+void init_pins();
 void drive_column(int c);
 int read_rows();
-char rows_to_key(int rows);
-//void handle_key(char key);
+
+void tim2_PWM(void);
+
+/* debouncing functions begin */
+void update_history(int c, int rows);
+char get_keypress(void);
+/* debouncing functions end */
+
+void init_spi1();
+
+/* interrupts begin */
+
 void setup_tim7();
 void TIM7_IRQHandler();
 
-void init_spi1_slow();
-//void spi_cmd(unsigned int data);
-//void spi_data(unsigned int data);
-//void spi1_init_oled();
-//void spi1_display1(const char *string);
-//void spi1_display2(const char *string);
-//void spi1_setup_dma(void);
-//void spi1_enable_dma(void);
+//void SysTick_Handler();
+//void init_systick();
+
+/* interrupts end */
+
+
+
+
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
 }
 
 int main(void) {
+	row_inc = pixel_row / num_table_rows;
+	col_inc = pixel_col / num_table_cols;
+
+
+
     init_pins();
     setup_tim7();
-    init_spi1_slow();
+    init_spi1();
     LCD_Setup();  // function from lcd.c
     LCD_Clear(0xFFFF);
 
+    init_display_fields(data_fields);
 
-    //LCD_DrawString(0,0, BLACK, WHITE, "what the fuck", 16, 0);
-
-
-
-
-
-
-    //LCD_Reset(); // function from lcd.c
-    //LCD_Clear(RED); // function from lcd.c setting display to cyan
-
-    //LCD_DrawString(0,0,GREEN, BLUE, "I no longer want", 16, 0);
-    //LCD_DrawString(0,16,GREEN, BLUE, "to kill myself", 16, 0);
-
-    //LCD_DrawLine(0,0,200,200, GREEN);
+    for(;;)
+    {
+    	pressed_key = get_keypress();
+    	process_keyPress(pressed_key);
+    	char result[5];
+    	sprintf(result, "%d", motor_des_voltage);
+    	if(motor_des_voltage == 11111) {
+    		init_display_fields(data_fields);
+    	}
 
 
+    }
+}
 
-    for(;;);
-    //	LCD_Clear(0x7FFF); // function from lcd.c setting display to cyan
-    //}
+
+void init_display_fields(char *data_fields_arr[]) {
+	/* requirements
+	 * divide display into table
+	 * input correct fields into spots of table
+	 *
+	 */
+
+	for(int idx_row = 0; idx_row < num_table_rows; idx_row++) {
+		for(int idx_col = 0; idx_col < num_table_cols; idx_col++) {
+			cursor_pos_row = idx_row * row_inc;
+			cursor_pos_col = idx_col * col_inc;
+			update_display_field(data_fields_arr[num_table_cols * idx_row + idx_col]);
+		}
+	}
+}
+
+/*
+ * take in value and update only the necessary section of the display
+ *
+ * updates field at cursor position
+ */
+void update_display_field(char *updated_string) {
+	LCD_DrawString(cursor_pos_col, cursor_pos_row, BLACK, WHITE, updated_string, font_size, 0);
+}
+
+void draw_cursor() {
+	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, BLACK);
+}
+
+void erase_cursor() {
+	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+}
+
+void process_keyPress(char key) {
+	// allow user to enter up to 4 digits 00.00 (0-24V)
+	// when user presses hashtag key, enter the number into the system
+	/* PARAMS NEEDED:
+	 * voltage
+	 * speed
+	 */
+	/* A-D effects for now:
+	 * A: left arrow
+	 * B: right arrow
+	 * C: start motor
+	 * D: stop motor
+	 */
+	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
+	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
+
+	uint8_t top_field_pos = 0;
+	uint8_t bottom_field_pos = row_inc * (num_table_rows - 1);
+
+	switch(key) {
+	case 'A':  // up arrow
+		erase_cursor();
+		if(cursor_pos_row > top_field_pos) {
+			cursor_pos_row -= row_inc;
+		}
+		draw_cursor();
+		break;
+	case 'B':  // down arrow
+		erase_cursor();
+		if(cursor_pos_row < bottom_field_pos) {
+			cursor_pos_row += row_inc;
+		}
+		draw_cursor();
+		break;
+	case 'C':  // left arrow
+		erase_cursor();
+		if(cursor_pos_col > far_left_pos) {
+			cursor_pos_col -= font_size / 2;
+		}
+		draw_cursor();
+		break;
+	case 'D':  // right arrow
+		erase_cursor();
+		if(cursor_pos_col < far_right_pos) {
+			cursor_pos_col += font_size / 2;
+		}
+		draw_cursor();
+		break;
+	case '#':  // enter value
+		erase_cursor();
+		cursor_pos_col = far_left_pos;
+		draw_cursor();
+		update_display_field(keypresses);
+
+		motor_des_voltage = 0;
+		int starting_power = 1;
+		for(int i = 0; i < num_digits; i++) {
+			motor_des_voltage += (keypresses[i] - '0') * (10000 / starting_power);
+			starting_power *= 10;
+		}
+
+		for(int i = 0; i < num_digits; i++) {
+			keypresses[i] = '0';
+		}
+		break;
+	default:  // record key presses
+		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
+		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
+		if(cursor_pos_col < far_right_pos) {
+			erase_cursor();
+			cursor_pos_col += font_size / 2;
+			draw_cursor();
+		}
+		break;
+
+	}
+
 
 }
+
+
 
 /**
  * @brief Init GPIO port B
@@ -115,13 +250,6 @@ int main(void) {
  *
  */
 void init_pins() {
-
-    // hijacked these pins for spi display due to instructions from niraj
-    //GPIOB->MODER &= ~0x00ff0000;
-    //GPIOB->MODER |= 0x00550000; // output pb11-pb8
-
-    //GPIOB->MODER &= ~0x00000303; // input pb0 and pb4
-
 	// PB8 SPI1_NSS (CS pin)
 	// PB11 nRESET
 	// PB14 DC
@@ -130,131 +258,23 @@ void init_pins() {
     GPIOB->MODER &= ~0x30C30000;
     GPIOB->MODER |= 0x10410000;
 
-//    // removing pb8 as generic output
-//    GPIOB->MODER &= ~0x30C00000;
-//	GPIOC->MODER |= 0x10400000;
-
-    // initialize nss to high
-    //GPIOB->ODR &= ~0x00000100;
-    //GPIOB->ODR |= 0x00000100;
-
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-    GPIOC->MODER &= 0xffff0000; //reset ports C0-C7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
-    GPIOC->MODER |= 0x00005500; // output pc7-pc4
+    GPIOC->MODER &= ~0x0000ffff; //reset ports C0-C7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
+    GPIOC->MODER |= 0x00005500; // output open drain pc7-pc4
 
+    GPIOC->OTYPER |= 0x000000F0; // open drain PC4-7 (for keypad debouncing)
+
+    // pull up resisters PC0-3
     GPIOC->PUPDR &= ~0x000000ff;
-    GPIOC->PUPDR |= 0x000000AA;
+    GPIOC->PUPDR |= 0x00000055;
 }
-
-
-/**
- * @brief Set GPIO port B pin to some value
- *
- * @param val    : Pin value, if 0 then the
- *                 pin is set low, else set high
- */
-//void setn(char val) {
-//
-//    if(val != 0) {
-//    	GPIOB->ODR |= val << 8;
-//    }
-//    else {
-//        GPIOB->ODR &= ~(0xF << 8);
-//    }
-//}
-
-
-/**
- * @brief Drive the column pins of the keypad
- *        First clear the keypad column output
- *        Then drive the column represented by `c`
- *
- * @param c
- */
-void drive_column(int c) {
-//    GPIOC->BRR = 0x000000F0;
-//    GPIOC->BSRR |= 0x0010 << (c & 0b11);
-	GPIOC->ODR &= 0x0000;
-	GPIOC->ODR |= 0x0001 << (c+4);
-}
-
-/**
- * @brief Read the rows value of the keypad
- *
- * @return int
- */
-int read_rows() {
-    return GPIOC->IDR & 0xF;
-}
-
-/**
- * @brief Convert the pressed key to character
- *        Use the rows value and the current `col`
- *        being scanning to compute an offset into
- *        the character map array
- *
- * @param rows
- * @return char
- */
-char rows_to_key(int rows) {
-    if(rows == 0x8) {
-        return keymap_arr[((col & 0b11)*4 + 3)];
-    }
-    else if(rows == 0x4) {
-        return keymap_arr[((col & 0b11)*4 + 2)];
-    }
-    else if(rows == 0x2) {
-        return keymap_arr[((col & 0b11)*4 + 1)];
-    }
-    else if(rows == 0x1) {
-        return keymap_arr[((col & 0b11)*4 + 0)];
-    }
-    return '0';
-}
-
-/**
- * @brief Setup timer 7 as described in lab handout
- *
- */
-void setup_tim7() {
-    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
-    TIM7->PSC = 4799;
-    TIM7->ARR = 9;
-    TIM7->DIER |= TIM_DIER_UIE;
-    TIM7->CR1 |= TIM_CR1_CEN;
-    NVIC->ISER[0] |= 0xffffffff;
-}
-
-//-------------------------------
-// Timer 7 ISR goes here
-//-------------------------------
-// TODO
-// void LCD_DrawChar(u16 x,u16 y,u16 fc, u16 bc, char num, u8 size, u8 mode
-void TIM7_IRQHandler(){
-    TIM7->SR = ~TIM_SR_UIF;
-    int rows = read_rows();
-    char key = 0x00;
-    if(rows != 0) {
-        key = rows_to_key(rows);
-        LCD_DrawString(num_char * 16,0, BLACK, WHITE, &key, 16, 0);
-        num_char += 1;
-    }
-    //setn(key);
-
-    col++;
-    if(col >= 5) {
-        col = 0;
-    }
-    drive_column(col);
-}
-
 
 
 //===========================================================================
 // 4.4 SPI OLED Display
 //===========================================================================
-void init_spi1_slow() {
+void init_spi1() {
     // PB3 SPI1_SCK
     // PB5 SPI1_MOSI
     // PB8 Generic output//CS NSS
@@ -303,66 +323,6 @@ void init_spi1_slow() {
     SPI1->CR1 |= SPI_CR1_SPE;  // enable spe
 }
 
-//void spi_cmd(unsigned int data) {
-//    while(!(SPI1->SR & SPI_SR_TXE)) {}
-//    SPI1->DR = data;
-//}
-//void spi_data(unsigned int data) {
-//    spi_cmd(data | 0x200);
-//}
-//void spi1_init_oled() {
-//    nano_wait(1000000);
-//    spi_cmd(0x38);
-//    spi_cmd(0x08);
-//    spi_cmd(0x01);
-//    nano_wait(2000000);
-//    spi_cmd(0x06);
-//    spi_cmd(0x02);
-//    spi_cmd(0x0c);
-//}
-//void spi1_display1(const char *string) {
-//    spi_cmd(0x02);
-//    while(*string != '\0') {
-//        spi_data(*string);
-//        string++;
-//    }
-//}
-//void spi1_display2(const char *string) {
-//    spi_cmd(0xc0);
-//    while(*string != '\0') {
-//        spi_data(*string);
-//        string++;
-//    }
-//}
-//
-//
-//
-////===========================================================================
-//// Configure the proper DMA channel to be triggered by SPI1_TX.
-//// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
-////===========================================================================
-//void spi1_setup_dma(void) {
-//    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
-//    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
-//    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
-//    DMA1_Channel3->CMAR = (uint32_t) display;///////////////////////// address?
-//    DMA1_Channel3->CNDTR = 34;
-//    DMA1_Channel3->CCR |= DMA_CCR_DIR;
-//    DMA1_Channel3->CCR |= DMA_CCR_MINC;
-//    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
-//    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
-//    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
-//    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
-//
-//}
-//
-////===========================================================================
-//// Enable the DMA channel triggered by SPI1_TX.
-////===========================================================================
-//void spi1_enable_dma(void) {
-//    DMA1_Channel3->CCR |= DMA_CCR_EN;
-//}
-
 
 void tim2_PWM(void) {
 	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
@@ -394,3 +354,52 @@ void tim2_PWM(void) {
 	TIM2 -> CCR3 = 200;
 	TIM2 -> CCR4 = 100;
 }
+
+
+/*
+ * INTERRUPTS EXIST BELOW THIS LINE
+ */
+
+
+/**
+ * @brief Setup timer 7
+ */
+void setup_tim7() {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+    TIM7->PSC = 4799;
+    TIM7->ARR = 9;
+    TIM7->DIER |= TIM_DIER_UIE;
+    TIM7->CR1 |= TIM_CR1_CEN;
+    NVIC->ISER[0] |= 0xffffffff;
+}
+
+//-------------------------------
+// Timer 7 ISR
+//-------------------------------
+
+void TIM7_IRQHandler(){
+    TIM7->SR = ~TIM_SR_UIF;
+    // Remember to acknowledge the interrupt here!
+    int rows = read_rows();
+    update_history(col, rows);
+    col = (col + 1) & 3;
+    drive_column(col);
+}
+
+///**
+// * @brief The ISR for the SysTick interrupt.
+// *
+// */
+//void SysTick_Handler() {
+//
+//}
+//
+///**
+// * @brief Enable the SysTick interrupt to occur every 1/16 seconds.
+// *
+// */
+//void init_systick() {
+//    SysTick->LOAD = 0x0005B8D7;
+//    SysTick->CTRL &= ~0x00000004;
+//    SysTick->CTRL |= 0x00000003;
+//}

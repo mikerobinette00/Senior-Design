@@ -39,6 +39,7 @@ extern lcd_dev_t lcddev;
 // 2: rotate: 180
 // 3: rotate 270
 #define USE_HORIZONTAL       0
+#define USE_VERTICAL 1
 #define FLIPPED_USE_HORIZONTAL 2
 
 // The dimensions of the display.
