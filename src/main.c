@@ -91,6 +91,10 @@ void TIM7_IRQHandler();
 void SysTick_Handler();
 void init_systick();
 
+//void EXTI0_1_IRQHandler();
+//void EXTI2_3_IRQHandler();
+//void init_exti();
+
 /* interrupts end */
 
 
@@ -114,6 +118,9 @@ int main(void) {
     setup_adc();
     init_tim2();
     init_systick();
+    //init_exti();
+    NVIC_SetPriority(SysTick_IRQn, -3);
+    NVIC_SetPriority(TIM7_IRQn, 0);
     // end of adc work
     LCD_Setup();  // function from lcd.c
     LCD_Clear(0xFFFF);
@@ -124,6 +131,7 @@ int main(void) {
     {
     	pressed_key = get_keypress();
     	process_keyPress(pressed_key);
+    	//process_keyPress(pressed_key);
     }
 }
 
@@ -142,6 +150,8 @@ void init_display_fields(char *data_fields_arr[]) {
 			update_display_field(data_fields_arr[num_table_cols * idx_row + idx_col]);
 		}
 	}
+	cursor_pos_col = col_inc * (num_table_cols - 1);
+	cursor_pos_row = 0;
 }
 
 /*
@@ -161,6 +171,8 @@ void erase_cursor() {
 	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
 }
 
+
+
 void process_keyPress(char key) {
 	// allow user to enter up to 4 digits 00.00 (0-24V)
 	// when user presses hashtag key, enter the number into the system
@@ -174,11 +186,26 @@ void process_keyPress(char key) {
 	 * C: start motor
 	 * D: stop motor
 	 */
+
+	NVIC_DisableIRQ(TIM2_IRQn);
+	NVIC_DisableIRQ(TIM7_IRQn);
+	NVIC_DisableIRQ(SysTick_IRQn);
+
 	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
 
 	uint8_t top_field_pos = 0;
 	uint8_t bottom_field_pos = row_inc * (num_table_rows - 2);
+
+	void process_num() {
+		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
+		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
+		if(cursor_pos_col < far_right_pos) {
+			erase_cursor();
+			cursor_pos_col += font_size / 2;
+			draw_cursor();
+		}
+	}
 
 	switch(key) {
 	case 'A':  // up arrow
@@ -232,19 +259,44 @@ void process_keyPress(char key) {
 			keypresses[i] = '0';
 		}
 		break;
-	default:  // record key presses
-		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
-		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
-		if(cursor_pos_col < far_right_pos) {
-			erase_cursor();
-			cursor_pos_col += font_size / 2;
-			draw_cursor();
-		}
+	case '0':
+		process_num();
+		break;
+	case '1':
+		process_num();
+		break;
+	case '2':
+		process_num();
+		break;
+	case '3':
+		process_num();
+		break;
+	case '4':
+		process_num();
+		break;
+	case '5':
+		process_num();
+		break;
+	case '6':
+		process_num();
+		break;
+	case '7':
+		process_num();
+		break;
+	case '8':
+		process_num();
+		break;
+	case '9':  // record key presses
+		process_num();
+		break;
+	default:
 		break;
 
 	}
 
-
+	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_EnableIRQ(TIM7_IRQn);
+	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -383,7 +435,7 @@ void init_spi1() {
 //============================================================================
 void setup_adc(void) {
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    GPIOA->MODER |= 0xC;
+    GPIOA->MODER |= 0x300;
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
     RCC->CR2 |= RCC_CR2_HSI14ON;
     while(!(RCC->CR2 & RCC_CR2_HSI14RDY));
@@ -391,7 +443,7 @@ void setup_adc(void) {
     while(!(ADC1->ISR & ADC_ISR_ADRDY));
 
     ADC1->CHSELR = 0;
-    ADC1->CHSELR |= 1 << 1;
+    ADC1->CHSELR |= 1 << 4;
 }
 
 //============================================================================
@@ -423,8 +475,12 @@ void TIM2_IRQHandler(){
 //============================================================================
 void init_tim2(void) {
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2->PSC = 47999;
-    TIM2->ARR = 99;
+//    // 10 hz sampling rate
+//    TIM2->PSC = 47999;
+//    TIM2->ARR = 99;
+    // 1000 hz sampling rate
+	TIM2->PSC = 4799;
+	TIM2->ARR = 9;
     TIM2->DIER |= TIM_DIER_UIE;
     TIM2->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] |= 0xffffffff;
@@ -467,6 +523,11 @@ void TIM7_IRQHandler(){
  *
  */
 void SysTick_Handler() {
+	//NVIC_DisableIRQ(TIM2_IRQn);
+	//NVIC_DisableIRQ(TIM7_IRQn);
+
+
+
 	char buffer[5];
 	// motor voltage
 	sprintf(buffer, "%d", motor_des_voltage);
@@ -478,6 +539,9 @@ void SysTick_Handler() {
 	sprintf(buffer, "%f", 2.95 * live_speed_reading / 4096);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+
+	//NVIC_EnableIRQ(TIM2_IRQn);
+	//NVIC_EnableIRQ(TIM7_IRQn);
 }
 
 /**
@@ -488,4 +552,45 @@ void init_systick() {
     SysTick->LOAD = 0x0005B8D7;
     SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
+
+
 }
+
+////==========================================================
+//// Write the EXTI interrupt handler for pins 0 and 1 below.
+//// Copy the name from startup/startup_stm32.s, create a label
+//// of that name below, declare it to be global, and declare
+//// it to be a function.
+//// It acknowledge the pending bit for pin 0, and it should
+//// call togglexn(GPIOB, 8).
+//
+//void EXTI0_1_IRQHandler() {
+//    EXTI->PR |= EXTI_PR_PR0 | EXTI_PR_PR1;
+//
+//    process_keyPress(get_keypress());
+//}
+//
+////==========================================================
+//// Write the EXTI interrupt handler for pins 2-3 below.
+//// It should acknowledge the pending bit for pin2, and it
+//// should call togglexn(GPIOB, 9).
+//
+//void EXTI2_3_IRQHandler() {
+//    EXTI->PR |= EXTI_PR_PR2 | EXTI_PR_PR3;
+//
+//    process_keyPress(get_keypress());
+//}
+//
+//void init_exti() {
+//    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+//
+//    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC | SYSCFG_EXTICR1_EXTI1_PC | SYSCFG_EXTICR1_EXTI2_PC | SYSCFG_EXTICR1_EXTI3_PC;
+//    //SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PB;
+//
+//    EXTI->RTSR |= EXTI_RTSR_TR0 | EXTI_RTSR_TR1 | EXTI_RTSR_TR2 | EXTI_RTSR_TR3;
+//
+//    EXTI->IMR |= EXTI_IMR_MR0 | EXTI_IMR_MR1 | EXTI_IMR_MR2 | EXTI_IMR_MR3;
+//
+//    NVIC->ISER[0] |= 0x000000E0;
+//
+//}
