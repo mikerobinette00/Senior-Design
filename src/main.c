@@ -80,8 +80,8 @@ void init_spi1();
 
 
 void setup_adc(void);
-void TIM2_IRQHandler();
-void init_tim2(void);
+void TIM3_IRQHandler();
+void init_tim3(void);
 
 /* interrupts begin */
 
@@ -90,10 +90,8 @@ void TIM7_IRQHandler();
 
 void SysTick_Handler();
 void init_systick();
-
-//void EXTI0_1_IRQHandler();
-//void EXTI2_3_IRQHandler();
-//void init_exti();
+void EXTI4_15_IRQHandler();
+void init_exti();
 
 /* interrupts end */
 
@@ -116,11 +114,11 @@ int main(void) {
     init_spi1();
     // adc work
     setup_adc();
-    init_tim2();
+    init_tim3();
     init_systick();
-    //init_exti();
-    NVIC_SetPriority(SysTick_IRQn, -3);
-    NVIC_SetPriority(TIM7_IRQn, 0);
+    init_exti();
+    NVIC_SetPriority(EXTI4_15_IRQn, 200);
+    //tim2_PWM();
     // end of adc work
     LCD_Setup();  // function from lcd.c
     LCD_Clear(0xFFFF);
@@ -322,7 +320,7 @@ void init_pins() {
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-    GPIOC->MODER &= ~0x0000ffff; //reset ports C0-C7 (0-3 will remain in this state as inputs.  4-7 will be set to outputs)
+    GPIOC->MODER &= ~0x000fffff; //reset ports C0-C9 (0-3 and 8-9 will remain in this state as inputs.  4-7 will be set to outputs)
     GPIOC->MODER |= 0x00005500; // output open drain pc7-pc4
 
     GPIOC->OTYPER |= 0x000000F0; // open drain PC4-7 (for keypad debouncing)
@@ -457,8 +455,8 @@ int bcn = 0;
 //============================================================================
 // Timer 2 ISR
 //============================================================================
-void TIM2_IRQHandler(){
-    TIM2->SR = ~TIM_SR_UIF;
+void TIM3_IRQHandler(){
+    TIM3->SR = ~TIM_SR_UIF;
     ADC1->CR |= ADC_CR_ADSTART;
     while(!(ADC1->ISR & ADC_ISR_EOC));
 
@@ -471,18 +469,18 @@ void TIM2_IRQHandler(){
 }
 
 //============================================================================
-// init_tim2()
+// init_tim3()
 //============================================================================
-void init_tim2(void) {
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+void init_tim3(void) {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 //    // 10 hz sampling rate
 //    TIM2->PSC = 47999;
 //    TIM2->ARR = 99;
     // 1000 hz sampling rate
-	TIM2->PSC = 4799;
-	TIM2->ARR = 9;
-    TIM2->DIER |= TIM_DIER_UIE;
-    TIM2->CR1 |= TIM_CR1_CEN;
+	TIM3->PSC = 4799;
+	TIM3->ARR = 9;
+    TIM3->DIER |= TIM_DIER_UIE;
+    TIM3->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] |= 0xffffffff;
 }
 
@@ -518,16 +516,13 @@ void TIM7_IRQHandler(){
     drive_column(col);
 }
 
+
+
 /**
  * @brief The ISR for the SysTick interrupt.
  *
  */
 void SysTick_Handler() {
-	//NVIC_DisableIRQ(TIM2_IRQn);
-	//NVIC_DisableIRQ(TIM7_IRQn);
-
-
-
 	char buffer[5];
 	// motor voltage
 	sprintf(buffer, "%d", motor_des_voltage);
@@ -539,9 +534,6 @@ void SysTick_Handler() {
 	sprintf(buffer, "%f", 2.95 * live_speed_reading / 4096);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
-
-	//NVIC_EnableIRQ(TIM2_IRQn);
-	//NVIC_EnableIRQ(TIM7_IRQn);
 }
 
 /**
@@ -556,41 +548,30 @@ void init_systick() {
 
 }
 
-////==========================================================
-//// Write the EXTI interrupt handler for pins 0 and 1 below.
-//// Copy the name from startup/startup_stm32.s, create a label
-//// of that name below, declare it to be global, and declare
-//// it to be a function.
-//// It acknowledge the pending bit for pin 0, and it should
-//// call togglexn(GPIOB, 8).
-//
-//void EXTI0_1_IRQHandler() {
-//    EXTI->PR |= EXTI_PR_PR0 | EXTI_PR_PR1;
-//
-//    process_keyPress(get_keypress());
-//}
-//
-////==========================================================
-//// Write the EXTI interrupt handler for pins 2-3 below.
-//// It should acknowledge the pending bit for pin2, and it
-//// should call togglexn(GPIOB, 9).
-//
-//void EXTI2_3_IRQHandler() {
-//    EXTI->PR |= EXTI_PR_PR2 | EXTI_PR_PR3;
-//
-//    process_keyPress(get_keypress());
-//}
-//
-//void init_exti() {
-//    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
-//
-//    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC | SYSCFG_EXTICR1_EXTI1_PC | SYSCFG_EXTICR1_EXTI2_PC | SYSCFG_EXTICR1_EXTI3_PC;
-//    //SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PB;
-//
-//    EXTI->RTSR |= EXTI_RTSR_TR0 | EXTI_RTSR_TR1 | EXTI_RTSR_TR2 | EXTI_RTSR_TR3;
-//
-//    EXTI->IMR |= EXTI_IMR_MR0 | EXTI_IMR_MR1 | EXTI_IMR_MR2 | EXTI_IMR_MR3;
-//
-//    NVIC->ISER[0] |= 0x000000E0;
-//
-//}
+
+
+// EXTI Interrupt handler for pins 4-15
+// acknowledge interrupt on pins 8,9
+void EXTI4_15_IRQHandler() {
+    EXTI->PR |= EXTI_PR_PR8 | EXTI_PR_PR9;
+
+    if(GPIOC->IDR & (0x1 << 8)) {  // start motor
+        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
+        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+    }
+    else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
+        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
+        TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+    }
+}
+
+void init_exti() {
+    // enable the clock
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+
+    // enable the exti interrupt for pins 8-9
+    SYSCFG->EXTICR[3] |= SYSCFG_EXTICR3_EXTI8_PC | SYSCFG_EXTICR3_EXTI9_PC;
+    EXTI->RTSR |= EXTI_RTSR_TR8 | EXTI_RTSR_TR9;
+    EXTI->IMR |= EXTI_IMR_MR8 | EXTI_IMR_MR9;
+    NVIC->ISER[0] |= 0x000000E0;
+}
