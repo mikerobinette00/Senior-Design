@@ -54,7 +54,7 @@ void update_history(int c, int rows)
 
 char get_key_event(void) {
     for(;;) {
-        asm volatile ("wfi" : :);   // wait for an interrupt
+        //asm volatile ("wfi" : :);   // wait for an interrupt
         if (queue[qout] != 0)
             break;
     }

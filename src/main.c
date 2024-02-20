@@ -185,9 +185,9 @@ void process_keyPress(char key) {
 	 * D: stop motor
 	 */
 
-	NVIC_DisableIRQ(TIM2_IRQn);
-	NVIC_DisableIRQ(TIM7_IRQn);
-	NVIC_DisableIRQ(SysTick_IRQn);
+//	NVIC_DisableIRQ(TIM3_IRQn);
+//	NVIC_DisableIRQ(TIM7_IRQn);
+//	NVIC_DisableIRQ(SysTick_IRQn);
 
 	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
@@ -292,9 +292,9 @@ void process_keyPress(char key) {
 
 	}
 
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_EnableIRQ(TIM7_IRQn);
-	NVIC_EnableIRQ(SysTick_IRQn);
+//	NVIC_EnableIRQ(TIM3_IRQn);
+//	NVIC_EnableIRQ(TIM7_IRQn);
+//	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -523,6 +523,9 @@ void TIM7_IRQHandler(){
  *
  */
 void SysTick_Handler() {
+//	NVIC_DisableIRQ(TIM3_IRQn);
+//	NVIC_DisableIRQ(TIM7_IRQn);
+
 	char buffer[5];
 	// motor voltage
 	sprintf(buffer, "%d", motor_des_voltage);
@@ -534,6 +537,9 @@ void SysTick_Handler() {
 	sprintf(buffer, "%f", 2.95 * live_speed_reading / 4096);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+
+//	NVIC_EnableIRQ(TIM3_IRQn);
+//	NVIC_EnableIRQ(TIM7_IRQn);
 }
 
 /**
@@ -557,11 +563,13 @@ void EXTI4_15_IRQHandler() {
 
     if(GPIOC->IDR & (0x1 << 8)) {  // start motor
         LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
-        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+        //TIM2 -> CCR2 = 200;
+        //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
     }
     else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
         LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
-        TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+        //TIM2 -> CCR2 = 800;
+        //TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
     }
 }
 
