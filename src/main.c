@@ -51,6 +51,7 @@ char rows_to_key(int rows);
 void setup_tim7();
 void TIM7_IRQHandler();
 void tim2_PWM(void);
+void tim17_DMA(void);
 
 void init_spi1();
 void spi_cmd(unsigned int data);
@@ -316,6 +317,7 @@ void spi1_enable_dma(void) {
 }
 
 
+
 void tim2_PWM(void) {
 	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
 	//Pinout layout: PA1-PA3
@@ -347,3 +349,22 @@ void tim2_PWM(void) {
 	TIM2 -> CCR4 = 100;
 }
 
+//Timer for DMA currently set to 100kHz
+void tim17_DMA(void) {
+	RCC -> APB2ENR |= RCC_APB2ENR_TIM17EN;
+	TIM17 -> PSC = 47;
+	TIM17 -> ARR = 9;
+	TIM17 -> DIER |= TIM_DIER_UDE; //UDE triggers DMA requests UIE triggers interrupts
+	TIM17 -> CR1 |= TIM_CR1_CEN;
+}
+
+void dma_communication() {
+	RCC -> AHBENR |= RCC_AHBENR_DMA1EN;
+	DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disable the DMA
+	ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN | ADC_CFGR1_DMACFG; //Enabling circular mode for now
+	DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1 -> DR)); //Configure the peripheral data register address
+	DMA1_Channel1 -> CMAR = (uint32_t) (&(ADC_array)); //Configure the memory address
+	DMA1_Channel1 -> CNDTR = 3; //PA3 Not sure how to code this
+	DMA1_Channel1 -> CCR |= DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_TEIE |DMA_CCR_CIRC; //PSIZE_0 for ADC
+	DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enable the DMA
+}
