@@ -326,10 +326,10 @@ void tim2_PWM(void) {
 	GPIOA -> AFR[0] &= ~0x0000FFF0;
 	GPIOA -> AFR[0] |= 0x00002220;
 
-	//Scaling the timer; Currently set to 1 Hz
+	//Scaling the timer; Currently set to 100 kHz
 	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-	TIM2 -> PSC = 47999;
-	TIM2 -> ARR = 999;
+	TIM2 -> PSC = 47;
+	TIM2 -> ARR = 9;
 
 	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
 	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
@@ -341,9 +341,9 @@ void tim2_PWM(void) {
 	//Enable TIM2 Counter
 	TIM2 -> CR1 |= TIM_CR1_CEN;
 
-	//Determines the duty cycle
-	TIM2 -> CCR2 = 800;
-	TIM2 -> CCR3 = 200;
+	//Determines the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
+	TIM2 -> CCR2 = 5;
+	TIM2 -> CCR3 = 2.5;
 	TIM2 -> CCR4 = 100;
 }
 
