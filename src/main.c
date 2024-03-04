@@ -117,7 +117,7 @@ int main(void) {
     init_tim3();
     init_systick();
     init_exti();
-    NVIC_SetPriority(EXTI4_15_IRQn, 200);
+    //NVIC_SetPriority(EXTI4_15_IRQn, 200);
     //tim2_PWM();
     // end of adc work
     LCD_Setup();  // function from lcd.c
@@ -544,8 +544,6 @@ void init_systick() {
     SysTick->LOAD = 0x0005B8D7;
     SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
-
-
 }
 
 
@@ -557,11 +555,11 @@ void EXTI4_15_IRQHandler() {
 
     if(GPIOC->IDR & (0x1 << 8)) {  // start motor
         LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
-        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+        //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
     }
     else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
         LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
-        TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+        //TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
     }
 }
 
