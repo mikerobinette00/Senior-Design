@@ -69,21 +69,29 @@ void init_pins();
 void drive_column(int c);
 int read_rows();
 
-//void tim2_PWM(void);
 
 /* debouncing functions begin */
 void update_history(int c, int rows);
 char get_keypress(void);
 /* debouncing functions end */
 
+/*
+ * rays functions for pwm and dma
+ */
+void tim2_PWM(void);
+void spi1_setup_dma(void);
+void spi1_enable_dma(void);
+/*
+ * end of rays functions
+ */
+
+/* interrupts begin */
 void init_spi1();
 
 
 void setup_adc(void);
 void TIM3_IRQHandler();
 void init_tim3(void);
-
-/* interrupts begin */
 
 void setup_tim7();
 void TIM7_IRQHandler();
@@ -95,6 +103,10 @@ void init_exti();
 
 /* interrupts end */
 
+/*
+ * placeholder global variable for dma
+ */
+int display[32];
 
 
 
@@ -112,14 +124,23 @@ int main(void) {
     init_pins();
     setup_tim7();
     init_spi1();
-    // adc work
+
     setup_adc();
     init_tim3();
     init_systick();
     init_exti();
-    //NVIC_SetPriority(EXTI4_15_IRQn, 200);
-    //tim2_PWM();
-    // end of adc work
+
+    /*
+     * rays functions
+     */
+    tim2_PWM();
+    spi1_setup_dma();
+    spi1_enable_dma();
+    /*
+     * end of rays functions
+     */
+
+
     LCD_Setup();  // function from lcd.c
     LCD_Clear(0xFFFF);
 
@@ -384,40 +405,6 @@ void init_spi1() {
 }
 
 
-//void tim2_PWM(void) {
-//	RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
-//	//Pinout layout: PA1-PA3
-//	GPIOA -> MODER &= ~0x000000FC;
-//	GPIOA -> MODER |= 0x000000A8;
-//
-//	//Come back to the AFR and what it does
-//	GPIOA -> AFR[0] &= ~0x0000FFF0;
-//	GPIOA -> AFR[0] |= 0x00002220;
-//
-//	//Scaling the timer; Currently set to 1 Hz
-//	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-//	TIM2 -> PSC = 47999;
-//	TIM2 -> ARR = 999;
-//
-//	TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
-//	TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
-//	TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
-//
-//	//Enable Output
-//	TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
-//
-//	//Enable TIM2 Counter
-//	TIM2 -> CR1 |= TIM_CR1_CEN;
-//
-//	//Determines the duty cycle
-//	TIM2 -> CCR2 = 400;
-//	TIM2 -> CCR3 = 200;
-//	TIM2 -> CCR4 = 100;
-//}
-
-
-
-
 
 //============================================================================
 // ADC conversion
@@ -482,6 +469,69 @@ void init_tim3(void) {
     TIM3->DIER |= TIM_DIER_UIE;
     TIM3->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] |= 0xffffffff;
+}
+
+//===========================================================================
+// Configure the proper DMA channel to be triggered by SPI1_TX.
+// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
+//===========================================================================
+void spi1_setup_dma(void) {
+    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
+    DMA1_Channel3->CMAR = (uint32_t) &display;///////////////////////// address?
+    DMA1_Channel3->CNDTR = 34;
+    DMA1_Channel3->CCR |= DMA_CCR_DIR;
+    DMA1_Channel3->CCR |= DMA_CCR_MINC;
+    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
+    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
+    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
+    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
+
+}
+
+
+/*
+ * TIM2 PWM and DMA
+ */
+
+//===========================================================================
+// Enable the DMA channel triggered by SPI1_TX.
+//===========================================================================
+void spi1_enable_dma(void) {
+    DMA1_Channel3->CCR |= DMA_CCR_EN;
+}
+
+
+void tim2_PWM(void) {
+    RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+    //Pinout layout: PA1-PA3
+    GPIOA -> MODER &= ~0x000000FC;
+    GPIOA -> MODER |= 0x000000A8;
+
+    //Come back to the AFR and what it does
+    GPIOA -> AFR[0] &= ~0x0000FFF0;
+    GPIOA -> AFR[0] |= 0x00002220;
+
+    //Scaling the timer; Currently set to 100 kHz
+    RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2 -> PSC = 47;
+    TIM2 -> ARR = 9;
+
+    TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+    TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
+    TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
+
+    //Enable Output
+    TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+    //Enable TIM2 Counter
+    TIM2 -> CR1 |= TIM_CR1_CEN;
+
+    //Determines the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
+    TIM2 -> CCR2 = 5;
+    TIM2 -> CCR3 = 2.5;
+    TIM2 -> CCR4 = 100;
 }
 
 
