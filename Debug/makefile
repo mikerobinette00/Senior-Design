@@ -31,10 +31,10 @@ endif
 all: Senior_Design.elf
 
 # Tool invocations
-Senior_Design.elf: $(OBJS) $(USER_OBJS) \\NAS01.ITAP.PURDUE.EDU\puhome\Desktop\Senior\ Design\Senior-Design/LinkerScript.ld
+Senior_Design.elf: $(OBJS) $(USER_OBJS) C:\Users\shado\OneDrive\Documents\GitHub\Senior-Design/LinkerScript.ld
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU GCC Linker'
-	arm-none-eabi-gcc -mcpu=cortex-m0 -mthumb -mfloat-abi=soft -T"//NAS01.ITAP.PURDUE.EDU/puhome/Desktop/Senior Design/Senior-Design/LinkerScript.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "Senior_Design.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
+	arm-none-eabi-gcc -mcpu=cortex-m0 -mthumb -mfloat-abi=soft -T"C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/LinkerScript.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "Senior_Design.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build

@@ -1,6 +1,4 @@
-StdPeriph_Driver/src/stm32f0xx_pwr.o: \
- ../StdPeriph_Driver/src/stm32f0xx_pwr.c \
- C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_pwr.h \
+src/lcd.o: ../src/lcd.c \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/CMSIS/device/stm32f0xx.h \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/CMSIS/core/core_cm0.h \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/CMSIS/core/core_cmInstr.h \
@@ -30,9 +28,7 @@ StdPeriph_Driver/src/stm32f0xx_pwr.o: \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_usart.h \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_wwdg.h \
  C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_misc.h \
- C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_rcc.h
-
-C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_pwr.h:
+ C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/inc/lcd.h
 
 C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/CMSIS/device/stm32f0xx.h:
 
@@ -92,4 +88,4 @@ C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm3
 
 C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_misc.h:
 
-C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/StdPeriph_Driver/inc/stm32f0xx_rcc.h:
+C:/Users/shado/OneDrive/Documents/GitHub/Senior-Design/inc/lcd.h:
