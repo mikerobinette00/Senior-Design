@@ -56,7 +56,7 @@ int motor_des_speed = 0;
 
 int updated_value = 0;
 
-int live_speed_reading = 2400;
+int live_speed_reading = 0;
 
 void init_display_fields(char *data_fields_arr[]);
 void update_display_field(char *updated_string);
@@ -431,30 +431,15 @@ void setup_adc(void) {
     ADC1->CHSELR |= 1 << 4;
 }
 
-//============================================================================
-// Varables for boxcar averaging.
-//============================================================================
-#define BCSIZE 32
-int bcsum = 0;
-int boxcar[BCSIZE];
-int bcn = 0;
 
-//============================================================================
-// Timer 2 ISR
-//============================================================================
-void TIM3_IRQHandler(){
-    TIM3->SR = ~TIM_SR_UIF;
-    ADC1->CR |= ADC_CR_ADSTART;
-    while(!(ADC1->ISR & ADC_ISR_EOC));
-
-    bcsum -= boxcar[bcn];
-    bcsum += boxcar[bcn] = ADC1->DR;
-    bcn += 1;
-    if (bcn >= BCSIZE)
-        bcn = 0;
-    live_speed_reading = bcsum / BCSIZE;
-}
-
+// hz to rpm = hz * 60
+/*
+ * flip flop variable
+ * when signal goes high -> set flipflop to 1
+ * when signal goes low -> set flipflop to 0
+ * have a counter that starts from 0 when flip flop goes high and ends when flipflop goes high again
+ * each counter increment is 1/1000 s
+ */
 //============================================================================
 // init_tim3()
 //============================================================================
@@ -470,6 +455,64 @@ void init_tim3(void) {
     TIM3->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] |= 0xffffffff;
 }
+
+//============================================================================
+// Varables for boxcar averaging.
+//============================================================================
+#define BCSIZE 32
+float bcsum = 0;
+float boxcar[BCSIZE];
+int bcn = 0;
+int flipflop = 0;
+float speed_counter = 0;
+
+
+//============================================================================
+// Timer 3 ISR
+//============================================================================
+void TIM3_IRQHandler(){
+    TIM3->SR = ~TIM_SR_UIF;
+    ADC1->CR |= ADC_CR_ADSTART;
+    while(!(ADC1->ISR & ADC_ISR_EOC));
+
+
+
+//    bcsum -= boxcar[bcn];
+//    bcsum += boxcar[bcn] = ADC1->DR;
+//    bcn += 1;
+//    if (bcn >= BCSIZE)
+//        bcn = 0;
+    //live_speed_reading = bcsum / BCSIZE; // 2.95 * live_speed_reading / 4096 -> conversion to voltage
+
+    float live_speed_reading_voltage = 2.95 * (ADC1->DR) / 4096;
+    speed_counter += 1;
+    if(live_speed_reading_voltage > 0.3) {
+    	if(flipflop == 0) {
+    		// do speed calc
+
+//			bcsum -= boxcar[bcn];
+//			bcsum += boxcar[bcn] = (1.0 / (speed_counter/1000.0)) * 60.0;
+//			bcn += 1;
+//			if (bcn >= BCSIZE) {
+//				live_speed_reading = bcsum / BCSIZE;
+//				bcn = 0;
+//			}
+
+    		live_speed_reading = (1.0 / (speed_counter/1000.0)) * 60.0;
+
+
+    		speed_counter = 0;
+    	}
+    	flipflop = 1;
+    }
+    else {
+    	flipflop = 0;
+    }
+
+
+
+}
+
 
 //===========================================================================
 // Configure the proper DMA channel to be triggered by SPI1_TX.
@@ -581,7 +624,7 @@ void SysTick_Handler() {
 	sprintf(buffer, "%d", motor_des_speed);
 	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
 	// adc reading for "motor speed"
-	sprintf(buffer, "%f", 2.95 * live_speed_reading / 4096);
+	sprintf(buffer, "%3d", live_speed_reading);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
 }
