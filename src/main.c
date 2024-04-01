@@ -42,13 +42,33 @@ const int num_table_cols = 4;
 uint8_t row_inc = 0;
 uint8_t col_inc = 0;
 
+
+
+/*
+ *
+ * variables for display updating
+ *
+ */
+
+char rated_motor_voltage[5] = "00.00";
+char rated_motor_max_RPM[5] = "00000";
+
+char measured_motor_RPM[5] = "00000";
+
+
+/*
+ *
+ * end of variables for display updating
+ *
+ */
+
 char pressed_key;
 char keypresses[5] = {"00000"};
 
 char *data_fields[] = {
-		"Rated Motor Voltage", "", "", "00.00",
-		"Rated Motor Max RPM", "", "", "00000",
-		"Measured Motor RPM", "", "", "00000"
+		"Rated Motor Voltage", "", "", rated_motor_voltage, //"00.00",
+		"Rated Motor Max RPM", "", "", rated_motor_max_RPM, //"00000",
+		"Measured Motor RPM", "", "", measured_motor_RPM, //"00000"
 };
 
 int motor_des_voltage = 0;
@@ -220,45 +240,45 @@ void process_keyPress(char key) {
 		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
 		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
 		if(cursor_pos_col < far_right_pos) {
-			erase_cursor();
+			//erase_cursor();
 			cursor_pos_col += font_size / 2;
-			draw_cursor();
+			//draw_cursor();
 		}
 	}
 
 	switch(key) {
 	case 'A':  // up arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row > top_field_pos) {
 			cursor_pos_row -= row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'B':  // down arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row < bottom_field_pos) {
 			cursor_pos_row += row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'C':  // left arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col > far_left_pos) {
 			cursor_pos_col -= font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'D':  // right arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col < far_right_pos) {
 			cursor_pos_col += font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case '#':  // enter value
-		erase_cursor();
+		//erase_cursor();
 		cursor_pos_col = far_left_pos;
-		draw_cursor();
+		//draw_cursor();
 		update_display_field(keypresses);
 
 		int input_value = 0;
@@ -331,13 +351,16 @@ void process_keyPress(char key) {
  *
  */
 void init_pins() {
-	// PB8 SPI1_NSS (CS pin)
-	// PB11 nRESET
-	// PB14 DC
+	// PB8 8 SPI1_NSS (CS pin)
+	// PB11 6 nRESET
+	// PB14 7 DC
     // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER &= ~0x30C30000;
-    GPIOB->MODER |= 0x10410000;
+    //GPIOB->MODER &= ~0x30C30000;
+    //GPIOB->MODER |= 0x10410000;
+    GPIOB->MODER &= ~0x0003F000;
+    GPIOB->MODER |= 0x00015000;
+
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -358,9 +381,9 @@ void init_pins() {
 void init_spi1() {
     // PB3 SPI1_SCK
     // PB5 SPI1_MOSI
-    // PB8 Generic output//CS NSS
-	// PB11 Generic output//nRESET
-	// PB14 Generic output//DC
+    // PB8 8 Generic output//CS NSS
+	// PB11 6 Generic output//nRESET
+	// PB14 7 Generic output//DC
 
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
@@ -627,6 +650,9 @@ void SysTick_Handler() {
 	sprintf(buffer, "%3d", live_speed_reading);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+
+	erase_cursor();
+	draw_cursor();
 }
 
 /**
