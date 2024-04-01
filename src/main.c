@@ -34,7 +34,10 @@ const int font_size = 16;  // currently only sizes 12 and 16 supported
 const int num_digits = 5;
 
 uint16_t cursor_pos_col = 0;
+uint16_t cursor_pos_col_prev = -1;
+
 uint16_t cursor_pos_row = 0;
+uint16_t cursor_pos_row_prev = -1;
 
 const int num_table_rows = 3;
 const int num_table_cols = 4;
@@ -145,8 +148,8 @@ int main(void) {
     setup_tim7();
     init_spi1();
 
-    setup_adc();
-    init_tim3();
+    //setup_adc();
+    //init_tim3();
     init_systick();
     init_exti();
 
@@ -170,7 +173,6 @@ int main(void) {
     {
     	pressed_key = get_keypress();
     	process_keyPress(pressed_key);
-    	//process_keyPress(pressed_key);
     }
 }
 
@@ -207,7 +209,7 @@ void draw_cursor() {
 }
 
 void erase_cursor() {
-	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+	LCD_DrawLine(cursor_pos_col_prev, cursor_pos_row_prev + font_size + 1, cursor_pos_col_prev + font_size / 2, cursor_pos_row_prev + font_size + 1, WHITE);
 }
 
 
@@ -226,10 +228,6 @@ void process_keyPress(char key) {
 	 * D: stop motor
 	 */
 
-	NVIC_DisableIRQ(TIM2_IRQn);
-	NVIC_DisableIRQ(TIM7_IRQn);
-	NVIC_DisableIRQ(SysTick_IRQn);
-
 	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
 
@@ -241,6 +239,7 @@ void process_keyPress(char key) {
 		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
 		if(cursor_pos_col < far_right_pos) {
 			//erase_cursor();
+			cursor_pos_col_prev = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
 			//draw_cursor();
 		}
@@ -250,6 +249,7 @@ void process_keyPress(char key) {
 	case 'A':  // up arrow
 		//erase_cursor();
 		if(cursor_pos_row > top_field_pos) {
+			cursor_pos_row_prev = cursor_pos_row;
 			cursor_pos_row -= row_inc;
 		}
 		//draw_cursor();
@@ -257,6 +257,7 @@ void process_keyPress(char key) {
 	case 'B':  // down arrow
 		//erase_cursor();
 		if(cursor_pos_row < bottom_field_pos) {
+			cursor_pos_row_prev = cursor_pos_row;
 			cursor_pos_row += row_inc;
 		}
 		//draw_cursor();
@@ -264,6 +265,7 @@ void process_keyPress(char key) {
 	case 'C':  // left arrow
 		//erase_cursor();
 		if(cursor_pos_col > far_left_pos) {
+			cursor_pos_col_prev = cursor_pos_col;
 			cursor_pos_col -= font_size / 2;
 		}
 		//draw_cursor();
@@ -271,12 +273,14 @@ void process_keyPress(char key) {
 	case 'D':  // right arrow
 		//erase_cursor();
 		if(cursor_pos_col < far_right_pos) {
+			cursor_pos_col_prev = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
 		}
 		//draw_cursor();
 		break;
 	case '#':  // enter value
 		//erase_cursor();
+		cursor_pos_col_prev = cursor_pos_col;
 		cursor_pos_col = far_left_pos;
 		//draw_cursor();
 		update_display_field(keypresses);
@@ -332,10 +336,6 @@ void process_keyPress(char key) {
 		break;
 
 	}
-
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_EnableIRQ(TIM7_IRQn);
-	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -639,19 +639,21 @@ void TIM7_IRQHandler(){
  *
  */
 void SysTick_Handler() {
-	char buffer[5];
+	//char buffer[5];
 	// motor voltage
-	sprintf(buffer, "%d", motor_des_voltage);
-	LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
+	//sprintf(buffer, "%d", motor_des_voltage);
+	//LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
 	// motor speed
-	sprintf(buffer, "%d", motor_des_speed);
-	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
+	//sprintf(buffer, "%d", motor_des_speed);
+	//LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
 	// adc reading for "motor speed"
-	sprintf(buffer, "%3d", live_speed_reading);
+	//sprintf(buffer, "%3d", live_speed_reading);
 
-	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+	//LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
 
 	erase_cursor();
+
+
 	draw_cursor();
 }
 
@@ -660,8 +662,10 @@ void SysTick_Handler() {
  *
  */
 void init_systick() {
-    SysTick->LOAD = 0x0005B8D7;
-    SysTick->CTRL &= ~0x00000004;
+	// 6mil divided by load value
+    SysTick->LOAD = 0x0005B8D7;  // 1/16 of a second
+	//SysTick->LOAD = 0x000186A0;  // 1/60th of a second
+	SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
 }
 
@@ -673,11 +677,11 @@ void EXTI4_15_IRQHandler() {
     EXTI->PR |= EXTI_PR_PR8 | EXTI_PR_PR9;
 
     if(GPIOC->IDR & (0x1 << 8)) {  // start motor
-        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
+        //LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
         //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
     }
     else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
-        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
+        //LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
         //TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
     }
 }
