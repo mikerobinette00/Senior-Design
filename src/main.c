@@ -148,8 +148,8 @@ int main(void) {
     setup_tim7();
     init_spi1();
 
-    //setup_adc();
-    //init_tim3();
+    setup_adc();
+    init_tim3();
     init_systick();
     init_exti();
 
@@ -236,7 +236,7 @@ void process_keyPress(char key) {
 
 	void process_num() {
 		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
-		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
+		// LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
 		if(cursor_pos_col < far_right_pos) {
 			//erase_cursor();
 			cursor_pos_col_prev = cursor_pos_col;
@@ -283,7 +283,7 @@ void process_keyPress(char key) {
 		cursor_pos_col_prev = cursor_pos_col;
 		cursor_pos_col = far_left_pos;
 		//draw_cursor();
-		update_display_field(keypresses);
+		// update_display_field(keypresses);
 
 		int input_value = 0;
 		int starting_power = 1;
@@ -302,39 +302,39 @@ void process_keyPress(char key) {
 			keypresses[i] = '0';
 		}
 		break;
-	case '0':
-		process_num();
-		break;
-	case '1':
-		process_num();
-		break;
-	case '2':
-		process_num();
-		break;
-	case '3':
-		process_num();
-		break;
-	case '4':
-		process_num();
-		break;
-	case '5':
-		process_num();
-		break;
-	case '6':
-		process_num();
-		break;
-	case '7':
-		process_num();
-		break;
-	case '8':
-		process_num();
-		break;
-	case '9':  // record key presses
-		process_num();
-		break;
+	// case '0':
+	// 	process_num();
+	// 	break;
+	// case '1':
+	// 	process_num();
+	// 	break;
+	// case '2':
+	// 	process_num();
+	// 	break;
+	// case '3':
+	// 	process_num();
+	// 	break;
+	// case '4':
+	// 	process_num();
+	// 	break;
+	// case '5':
+	// 	process_num();
+	// 	break;
+	// case '6':
+	// 	process_num();
+	// 	break;
+	// case '7':
+	// 	process_num();
+	// 	break;
+	// case '8':
+	// 	process_num();
+	// 	break;
+	// case '9':  // record key presses
+	// 	process_num();
+	// 	break;
 	default:
+		process_num();
 		break;
-
 	}
 }
 
@@ -652,8 +652,12 @@ void SysTick_Handler() {
 	//LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
 
 	erase_cursor();
-
-
+	if(pressed_key = '#') {
+		update_display_field(keypresses);
+	}
+	else {
+		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, pressed_key, font_size, 0);
+	}
 	draw_cursor();
 }
 
