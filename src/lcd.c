@@ -18,14 +18,14 @@ lcd_dev_t lcddev;
 #define CS_BIT  (1<<CS_NUM)
 #define CS_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_8; } while(0)
 #define CS_LOW do { GPIOB->BSRR = GPIO_BSRR_BR_8; } while(0)
-#define RESET_NUM 11
+#define RESET_NUM 6
 #define RESET_BIT (1<<RESET_NUM)
-#define RESET_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_11; } while(0)
-#define RESET_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_11; } while(0)
-#define DC_NUM 14
+#define RESET_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_6; } while(0)
+#define RESET_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_6; } while(0)
+#define DC_NUM 7
 #define DC_BIT (1<<DC_NUM)
-#define DC_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_14; } while(0)
-#define DC_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_14; } while(0)
+#define DC_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_7; } while(0)
+#define DC_LOW  do { GPIOB->BSRR = GPIO_BSRR_BR_7; } while(0)
 
 // Set the CS pin low if val is non-zero.
 // Note that when CS is being set high again, wait on SPI to not be busy.

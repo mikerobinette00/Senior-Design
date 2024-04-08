@@ -15,6 +15,7 @@
 #include "stm32f0xx.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "lcd.h"  // library provided by Niraj Menon for driving LCD display
 
 void LCD_Setup();
@@ -35,6 +36,8 @@ const int num_digits = 5;
 
 uint16_t cursor_pos_col = 0;
 uint16_t cursor_pos_row = 0;
+uint16_t cursor_pos_row_old = 0;
+uint16_t cursor_pos_col_old = 0;
 
 const int num_table_rows = 3;
 const int num_table_cols = 4;
@@ -50,6 +53,9 @@ char *data_fields[] = {
 		"Rated Motor Max RPM", "", "", "00000",
 		"Measured Motor RPM", "", "", "00000"
 };
+
+bool enter_key_pressed = false;
+bool process_num_triggered = false;
 
 int motor_des_voltage = 0;
 int motor_des_speed = 0;
@@ -187,7 +193,9 @@ void draw_cursor() {
 }
 
 void erase_cursor() {
-	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+//	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+	LCD_DrawLine(col_inc * (num_table_cols - 1), 0 + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), 0 + font_size + 1, WHITE);
+	LCD_DrawLine(col_inc * (num_table_cols - 1), row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), row_inc + font_size + 1, WHITE);
 }
 
 
@@ -206,9 +214,9 @@ void process_keyPress(char key) {
 	 * D: stop motor
 	 */
 
-	NVIC_DisableIRQ(TIM2_IRQn);
-	NVIC_DisableIRQ(TIM7_IRQn);
-	NVIC_DisableIRQ(SysTick_IRQn);
+//	NVIC_DisableIRQ(TIM2_IRQn);
+//	NVIC_DisableIRQ(TIM7_IRQn);
+//	NVIC_DisableIRQ(SysTick_IRQn);
 
 	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
@@ -217,49 +225,60 @@ void process_keyPress(char key) {
 	uint8_t bottom_field_pos = row_inc * (num_table_rows - 2);
 
 	void process_num() {
+		if(pressed_key == '#') {
+			return;
+		}
 		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
-		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
+		process_num_triggered = true;
+//		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
 		if(cursor_pos_col < far_right_pos) {
-			erase_cursor();
+			//erase_cursor();
+			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
-			draw_cursor();
+			//draw_cursor();
 		}
 	}
 
 	switch(key) {
 	case 'A':  // up arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row > top_field_pos) {
+			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row -= row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'B':  // down arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row < bottom_field_pos) {
+			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row += row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'C':  // left arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col > far_left_pos) {
+			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col -= font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'D':  // right arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col < far_right_pos) {
+			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case '#':  // enter value
-		erase_cursor();
+		//erase_cursor();
+		cursor_pos_col_old = cursor_pos_col;
 		cursor_pos_col = far_left_pos;
-		draw_cursor();
-		update_display_field(keypresses);
+		//draw_cursor();
+		enter_key_pressed = true;
+		//update_display_field(keypresses);
 
 		int input_value = 0;
 		int starting_power = 1;
@@ -313,9 +332,9 @@ void process_keyPress(char key) {
 
 	}
 
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_EnableIRQ(TIM7_IRQn);
-	NVIC_EnableIRQ(SysTick_IRQn);
+//	NVIC_EnableIRQ(TIM2_IRQn);
+//	NVIC_EnableIRQ(TIM7_IRQn);
+//	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -336,8 +355,10 @@ void init_pins() {
 	// PB14 DC
     // set pins pb8,11,14 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER &= ~0x30C30000;
-    GPIOB->MODER |= 0x10410000;
+    //GPIOB->MODER &= ~0x30C30000;
+    //GPIOB->MODER |= 0x10410000;
+    GPIOB->MODER &= ~0x0003F000;
+    GPIOB->MODER |= 0x00015000;
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -627,6 +648,18 @@ void SysTick_Handler() {
 	sprintf(buffer, "%3d", live_speed_reading);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+
+
+	if(enter_key_pressed) {
+		update_display_field(keypresses);
+		enter_key_pressed = false;
+	}
+	if(process_num_triggered) {
+		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, pressed_key, font_size, 0);
+	}
+
+	erase_cursor();
+	draw_cursor();
 }
 
 /**
@@ -634,7 +667,8 @@ void SysTick_Handler() {
  *
  */
 void init_systick() {
-    SysTick->LOAD = 0x0005B8D7;
+//    SysTick->LOAD = 0x0005B8D7;
+    SysTick->LOAD = 0x0000B71A;
     SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
 }
