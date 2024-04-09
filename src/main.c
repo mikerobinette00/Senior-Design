@@ -64,6 +64,16 @@ int updated_value = 0;
 
 int live_speed_reading = 0;
 
+
+
+
+uint8_t far_left_pos = 0;
+uint8_t far_right_pos = 0;
+int8_t top_field_pos = 0;
+uint8_t bottom_field_pos = 0;
+
+
+
 void init_display_fields(char *data_fields_arr[]);
 void update_display_field(char *updated_string);
 void draw_cursor();
@@ -124,6 +134,12 @@ void mysleep(void) {
 int main(void) {
 	row_inc = pixel_row / num_table_rows;
 	col_inc = pixel_col / num_table_cols;
+
+	far_left_pos = col_inc * (num_table_cols - 1);
+	far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
+
+	top_field_pos = 0;
+	bottom_field_pos = row_inc * (num_table_rows - 2);
 
 
 
@@ -218,11 +234,7 @@ void process_keyPress(char key) {
 //	NVIC_DisableIRQ(TIM7_IRQn);
 //	NVIC_DisableIRQ(SysTick_IRQn);
 
-	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
-	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
 
-	uint8_t top_field_pos = 0;
-	uint8_t bottom_field_pos = row_inc * (num_table_rows - 2);
 
 	void process_num() {
 		if(pressed_key == '#') {
@@ -231,12 +243,7 @@ void process_keyPress(char key) {
 		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
 		process_num_triggered = true;
 //		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
-		if(cursor_pos_col < far_right_pos) {
-			//erase_cursor();
-			cursor_pos_col_old = cursor_pos_col;
-			cursor_pos_col += font_size / 2;
-			//draw_cursor();
-		}
+
 	}
 
 	switch(key) {
@@ -654,8 +661,16 @@ void SysTick_Handler() {
 		update_display_field(keypresses);
 		enter_key_pressed = false;
 	}
-	if(process_num_triggered) {
+	if(process_num_triggered && pressed_key != '#' && pressed_key != 'A' && pressed_key != 'B' && pressed_key != 'C' && pressed_key != 'D') {
 		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, pressed_key, font_size, 0);
+
+		if(cursor_pos_col < far_right_pos) {
+			//erase_cursor();
+			cursor_pos_col_old = cursor_pos_col;
+			cursor_pos_col += font_size / 2;
+			//draw_cursor();
+		}
+		process_num_triggered = false;
 	}
 
 	erase_cursor();
