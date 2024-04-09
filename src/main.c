@@ -25,7 +25,7 @@ void LCD_DrawString(u16 x,u16 y, u16 fc, u16 bg, const char *p, u8 size, u8 mode
 void LCD_DrawLine(u16 x1, u16 y1, u16 x2, u16 y2, u16 c);
 
 uint8_t num_char = 0;
-uint8_t col;
+uint8_t col = 0;
 
 /* display block begin */
 const int pixel_col = 240;
@@ -127,8 +127,8 @@ int display[32];
 
 
 
-void mysleep(void) {
-    for(int n = 0; n < 1000; n++);
+void mysleep(int time) {
+    for(int n = 0; n < time; n++);
 }
 
 int main(void) {
@@ -142,22 +142,32 @@ int main(void) {
 	bottom_field_pos = row_inc * (num_table_rows - 2);
 
 
+	NVIC_SetPriority(SysTick_IRQn, 0);
+	NVIC_SetPriority(TIM2_IRQn, 10);
+	NVIC_SetPriority(TIM3_IRQn, 10);
+	NVIC_SetPriority(TIM7_IRQn, 10);
+	NVIC_SetPriority(EXTI4_15_IRQn, 1);
 
-    init_pins();
-    setup_tim7();
-    init_spi1();
+    init_pins();  // generic pin setup
 
-    setup_adc();
-    init_tim3();
-    init_systick();
-    init_exti();
+    init_spi1();  // display setup
+    init_systick();  // display update loop
+
+
+    setup_tim7();  // keypad
+
+
+    setup_adc();  // adc loop
+    init_tim3();  // timer for adc
+
+    init_exti();  // external interrupts setup
 
     /*
      * rays functions
      */
-    tim2_PWM();
-    spi1_setup_dma();
-    spi1_enable_dma();
+    tim2_PWM();  // pwm signal loop
+//    spi1_setup_dma();
+//    spi1_enable_dma();
     /*
      * end of rays functions
      */
@@ -168,11 +178,12 @@ int main(void) {
 
     init_display_fields(data_fields);
 
+
+    //mysleep(1000);
     for(;;)
     {
     	pressed_key = get_keypress();
     	process_keyPress(pressed_key);
-    	//process_keyPress(pressed_key);
     }
 }
 
@@ -409,7 +420,7 @@ void init_spi1() {
     // set baud rate divisor to max value to make baud rate as low as possible?
     // set baud bits to 000
     SPI1->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
-    SPI1->CR1 |= SPI_CR1_BR_0;
+//    SPI1->CR1 |= SPI_CR1_BR_0;
 
     // set master mode
     SPI1->CR1 |= SPI_CR1_MSTR;
@@ -614,6 +625,8 @@ void tim2_PWM(void) {
 
 /**
  * @brief Setup timer 7
+ *
+ * key pad timer
  */
 void setup_tim7() {
     RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
@@ -625,7 +638,7 @@ void setup_tim7() {
 }
 
 //-------------------------------
-// Timer 7 ISR
+// Timer 7 ISR (keypad)
 //-------------------------------
 
 void TIM7_IRQHandler(){
@@ -682,8 +695,11 @@ void SysTick_Handler() {
  *
  */
 void init_systick() {
-//    SysTick->LOAD = 0x0005B8D7;
-    SysTick->LOAD = 0x0000B71A;
+	//NVIC_SetPriority(SysTick_IRQn, 0);
+    SysTick->LOAD = 0x0005B8D7;
+//    SysTick->LOAD = 0x0000B71A;
+	//SysTick->LOAD = 0x0000071A;
+	//SysTick->LOAD = 0x00000001;
     SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
 }
