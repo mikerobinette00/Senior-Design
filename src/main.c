@@ -358,13 +358,27 @@ void tim17_DMA(void) {
 	TIM17 -> CR1 |= TIM_CR1_CEN;
 }
 
-void dma_communication() {
-	RCC -> AHBENR |= RCC_AHBENR_DMA1EN;
-	DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disable the DMA
-	ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN | ADC_CFGR1_DMACFG; //Enabling circular mode for now
-	DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1 -> DR)); //Configure the peripheral data register address
-	DMA1_Channel1 -> CMAR = (uint32_t) (&(ADC_array)); //Configure the memory address
-	DMA1_Channel1 -> CNDTR = 3; //PA3 Not sure how to code this
-	DMA1_Channel1 -> CCR |= DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_TEIE |DMA_CCR_CIRC; //PSIZE_0 for ADC
-	DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enable the DMA
+void dma_mem_to_perhipheral(void) {
+    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+    DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
+    DMA1_Channel1 -> CPAR = (uint32_t) (&(GPIOA->ODR)); //Addres of the peripheral register
+    ***DMA1_Channel1 -> CMAR = (uint32_t) YUR; //Address of memory registor
+    DMA1_Channel1 -> CNDTR = 32; //Size of the array being stored
+    DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
+    DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
+    DMA1_Channel1 -> CCR &= ~DMA_CCR_PINC; //Only used for memory to memory
+    DMA1_Channel1 -> CCR &= ~0x00000F00;  // clear Msize and psize
+    DMA1_Channel1 -> CCR |= 0x00000A00;  // 32 bits on msize and psize (1010)
+    DMA1_Channel1 -> CCR |= DMA_CCR_CIRC; //Enabling circular mode
+    DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enabling the DMA
 }
+
+//Timer for DMA
+void init_tim17(void) {
+    RCC -> APB2ENR |= RCC_APB2ENR_TIM15EN;
+    TIM17 -> PSC = 4799;
+    TIM17 -> ARR = 9;
+    TIM17 -> DIER |= TIM_DIER_UDE;
+    TIM17 -> CR1 |= TIM_CR1_CEN;
+}
+
