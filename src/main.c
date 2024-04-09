@@ -62,6 +62,8 @@ void spi1_display2(const char *string);
 void spi1_setup_dma(void);
 void spi1_enable_dma(void);
 
+uint16_t ADC_array[32] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700};
+
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
 }
@@ -361,8 +363,9 @@ void tim17_DMA(void) {
 void dma_mem_to_perhipheral(void) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
-    DMA1_Channel1 -> CPAR = (uint32_t) (&(GPIOA->ODR)); //Addres of the peripheral register
-    ***DMA1_Channel1 -> CMAR = (uint32_t) YUR; //Address of memory registor
+    ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
+    DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1->DR)); //Address of the peripheral register
+    DMA1_Channel1 -> CMAR = (uint32_t) (ADC_array); //Address of memory register
     DMA1_Channel1 -> CNDTR = 32; //Size of the array being stored
     DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
     DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
