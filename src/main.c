@@ -206,9 +206,9 @@ void process_keyPress(char key) {
 	 * D: stop motor
 	 */
 
-	NVIC_DisableIRQ(TIM2_IRQn);
-	NVIC_DisableIRQ(TIM7_IRQn);
-	NVIC_DisableIRQ(SysTick_IRQn);
+//	NVIC_DisableIRQ(TIM2_IRQn);
+//	NVIC_DisableIRQ(TIM7_IRQn);
+//	NVIC_DisableIRQ(SysTick_IRQn);
 
 	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
 	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
@@ -313,9 +313,9 @@ void process_keyPress(char key) {
 
 	}
 
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_EnableIRQ(TIM7_IRQn);
-	NVIC_EnableIRQ(SysTick_IRQn);
+//	NVIC_EnableIRQ(TIM2_IRQn);
+//	NVIC_EnableIRQ(TIM7_IRQn);
+//	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -332,12 +332,14 @@ void process_keyPress(char key) {
  */
 void init_pins() {
 	// PB8 SPI1_NSS (CS pin)
-	// PB11 nRESET
-	// PB14 DC
-    // set pins pb8,11,14 as GPIO outputs
+	// PB6 nRESET
+	// PB7 DC
+    // set pins pb8,6,7 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER &= ~0x30C30000;
-    GPIOB->MODER |= 0x10410000;
+//    GPIOB->MODER &= ~0x30C30000;
+//    GPIOB->MODER |= 0x10410000;
+    GPIOB->MODER &= ~0x0003F000;
+    GPIOB->MODER |= 0x00015000;
 
     // settings GPIOC pins for keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -359,8 +361,8 @@ void init_spi1() {
     // PB3 SPI1_SCK
     // PB5 SPI1_MOSI
     // PB8 Generic output//CS NSS
-	// PB11 Generic output//nRESET
-	// PB14 Generic output//DC
+	// PB6 Generic output//nRESET
+	// PB7 Generic output//DC
 
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
