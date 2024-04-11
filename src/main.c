@@ -571,7 +571,7 @@ void tim2_PWM(void) {
     TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     //Enable TIM2 Counter
-    TIM2 -> CR1 |= TIM_CR1_CEN;
+    //TIM2 -> CR1 |= TIM_CR1_CEN;
 
     // Logic to determine duty cycle (variables temporary)
     float UI = 18;
