@@ -53,7 +53,7 @@ char *data_fields[] = {
 
 int motor_des_voltage = 0;
 int motor_des_speed = 0;
-
+int motor_max_speed = 0;
 int updated_value = 0;
 
 int live_speed_reading = 0;
@@ -574,24 +574,22 @@ void tim2_PWM(void) {
     //TIM2 -> CR1 |= TIM_CR1_CEN;
 
     // Logic to determine duty cycle (variables temporary)
-    float UI = 18;
     float BV = 9;
     float d_buck = 0;
     float d_boost = 0;
-    float max_speed = 100;
-    float desired_speed = 80;
+    float max_speed = 100; //User input max speed
     float d_Hbridge = 0;
 
-    if (UI <= BV) {
-    	d_buck = 10 * (UI / BV);
+    if (motor_des_voltage <= BV) {
+    	d_buck = 10 * (motor_des_voltage / BV);
     	d_boost = 0;
     }
     else
     {
     	d_buck = 10;
-    	d_boost = 10 * (1 - (BV/UI));
+    	d_boost = 10 * (1 - (BV/motor_des_voltage));
     }
-    d_Hbridge = 10 * (desired_speed / max_speed);
+    d_Hbridge = 10 * (motor_des_speed / max_speed);
 
     //Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
     TIM2 -> CCR2 = d_Hbridge; //H Bridge
