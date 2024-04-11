@@ -15,6 +15,7 @@
 #include "stm32f0xx.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "lcd.h"  // library provided by Niraj Menon for driving LCD display
 
 void LCD_Setup();
@@ -24,7 +25,7 @@ void LCD_DrawString(u16 x,u16 y, u16 fc, u16 bg, const char *p, u8 size, u8 mode
 void LCD_DrawLine(u16 x1, u16 y1, u16 x2, u16 y2, u16 c);
 
 uint8_t num_char = 0;
-uint8_t col;
+uint8_t col = 0;
 
 /* display block begin */
 const int pixel_col = 240;
@@ -35,6 +36,8 @@ const int num_digits = 5;
 
 uint16_t cursor_pos_col = 0;
 uint16_t cursor_pos_row = 0;
+uint16_t cursor_pos_row_old = 0;
+uint16_t cursor_pos_col_old = 0;
 
 const int num_table_rows = 3;
 const int num_table_cols = 4;
@@ -51,12 +54,25 @@ char *data_fields[] = {
 		"Measured Motor RPM", "", "", "00000"
 };
 
+bool enter_key_pressed = false;
+bool process_num_triggered = false;
+
 int motor_des_voltage = 0;
 int motor_des_speed = 0;
 int motor_max_speed = 0;
 int updated_value = 0;
 
 int live_speed_reading = 0;
+
+
+
+
+uint8_t far_left_pos = 0;
+uint8_t far_right_pos = 0;
+int8_t top_field_pos = 0;
+uint8_t bottom_field_pos = 0;
+
+
 
 void init_display_fields(char *data_fields_arr[]);
 void update_display_field(char *updated_string);
@@ -111,31 +127,47 @@ void init_exti();
 int display[32];
 int ADC_array[32];
 
-void mysleep(void) {
-    for(int n = 0; n < 1000; n++);
+void mysleep(int time) {
+    for(int n = 0; n < time; n++);
 }
 
 int main(void) {
 	row_inc = pixel_row / num_table_rows;
 	col_inc = pixel_col / num_table_cols;
 
+	far_left_pos = col_inc * (num_table_cols - 1);
+	far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
+
+	top_field_pos = 0;
+	bottom_field_pos = row_inc * (num_table_rows - 2);
 
 
-    init_pins();
-    setup_tim7();
-    init_spi1();
+	NVIC_SetPriority(SysTick_IRQn, 0);
+	NVIC_SetPriority(TIM2_IRQn, 10);
+	NVIC_SetPriority(TIM3_IRQn, 10);
+	NVIC_SetPriority(TIM7_IRQn, 10);
+	NVIC_SetPriority(EXTI4_15_IRQn, 1);
 
-    setup_adc();
-    init_tim3();
-    init_systick();
-    init_exti();
+    init_pins();  // generic pin setup
+
+    init_spi1();  // display setup
+    init_systick();  // display update loop
+
+
+    setup_tim7();  // keypad
+
+
+    setup_adc();  // adc loop
+    init_tim3();  // timer for adc
+
+    init_exti();  // external interrupts setup
 
     /*
      * rays functions
      */
-    tim2_PWM();
-    spi1_setup_dma();
-    spi1_enable_dma();
+    tim2_PWM();  // pwm signal loop
+//    spi1_setup_dma();
+//    spi1_enable_dma();
     /*
      * end of rays functions
      */
@@ -146,11 +178,12 @@ int main(void) {
 
     init_display_fields(data_fields);
 
+
+    //mysleep(1000);
     for(;;)
     {
     	pressed_key = get_keypress();
     	process_keyPress(pressed_key);
-    	//process_keyPress(pressed_key);
     }
 }
 
@@ -187,7 +220,9 @@ void draw_cursor() {
 }
 
 void erase_cursor() {
-	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+//	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
+	LCD_DrawLine(col_inc * (num_table_cols - 1), 0 + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), 0 + font_size + 1, WHITE);
+	LCD_DrawLine(col_inc * (num_table_cols - 1), row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), row_inc + font_size + 1, WHITE);
 }
 
 
@@ -210,56 +245,58 @@ void process_keyPress(char key) {
 //	NVIC_DisableIRQ(TIM7_IRQn);
 //	NVIC_DisableIRQ(SysTick_IRQn);
 
-	uint8_t far_left_pos = col_inc * (num_table_cols - 1);
-	uint8_t far_right_pos = far_left_pos + (font_size / 2) * (num_digits - 1);
 
-	uint8_t top_field_pos = 0;
-	uint8_t bottom_field_pos = row_inc * (num_table_rows - 2);
 
 	void process_num() {
-		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
-		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
-		if(cursor_pos_col < far_right_pos) {
-			erase_cursor();
-			cursor_pos_col += font_size / 2;
-			draw_cursor();
+		if(pressed_key == '#') {
+			return;
 		}
+		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
+		process_num_triggered = true;
+//		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
+
 	}
 
 	switch(key) {
 	case 'A':  // up arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row > top_field_pos) {
+			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row -= row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'B':  // down arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_row < bottom_field_pos) {
+			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row += row_inc;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'C':  // left arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col > far_left_pos) {
+			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col -= font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case 'D':  // right arrow
-		erase_cursor();
+		//erase_cursor();
 		if(cursor_pos_col < far_right_pos) {
+			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
 		}
-		draw_cursor();
+		//draw_cursor();
 		break;
 	case '#':  // enter value
-		erase_cursor();
+		//erase_cursor();
+		cursor_pos_col_old = cursor_pos_col;
 		cursor_pos_col = far_left_pos;
-		draw_cursor();
-		update_display_field(keypresses);
+		//draw_cursor();
+		enter_key_pressed = true;
+		//update_display_field(keypresses);
 
 		int input_value = 0;
 		int starting_power = 1;
@@ -336,8 +373,8 @@ void init_pins() {
 	// PB7 DC
     // set pins pb8,6,7 as GPIO outputs
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-//    GPIOB->MODER &= ~0x30C30000;
-//    GPIOB->MODER |= 0x10410000;
+    //GPIOB->MODER &= ~0x30C30000;
+    //GPIOB->MODER |= 0x10410000;
     GPIOB->MODER &= ~0x0003F000;
     GPIOB->MODER |= 0x00015000;
 
@@ -383,7 +420,7 @@ void init_spi1() {
     // set baud rate divisor to max value to make baud rate as low as possible?
     // set baud bits to 000
     SPI1->CR1 &= ~(SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2);
-    SPI1->CR1 |= SPI_CR1_BR_0;
+//    SPI1->CR1 |= SPI_CR1_BR_0;
 
     // set master mode
     SPI1->CR1 |= SPI_CR1_MSTR;
@@ -606,6 +643,8 @@ void tim2_PWM(void) {
 
 /**
  * @brief Setup timer 7
+ *
+ * key pad timer
  */
 void setup_tim7() {
     RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
@@ -617,7 +656,7 @@ void setup_tim7() {
 }
 
 //-------------------------------
-// Timer 7 ISR
+// Timer 7 ISR (keypad)
 //-------------------------------
 
 void TIM7_IRQHandler(){
@@ -647,6 +686,26 @@ void SysTick_Handler() {
 	sprintf(buffer, "%3d", live_speed_reading);
 
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+
+
+	if(enter_key_pressed) {
+		update_display_field(keypresses);
+		enter_key_pressed = false;
+	}
+	if(process_num_triggered && pressed_key != '#' && pressed_key != 'A' && pressed_key != 'B' && pressed_key != 'C' && pressed_key != 'D') {
+		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, pressed_key, font_size, 0);
+
+		if(cursor_pos_col < far_right_pos) {
+			//erase_cursor();
+			cursor_pos_col_old = cursor_pos_col;
+			cursor_pos_col += font_size / 2;
+			//draw_cursor();
+		}
+		process_num_triggered = false;
+	}
+
+	erase_cursor();
+	draw_cursor();
 }
 
 /**
@@ -654,7 +713,11 @@ void SysTick_Handler() {
  *
  */
 void init_systick() {
+	//NVIC_SetPriority(SysTick_IRQn, 0);
     SysTick->LOAD = 0x0005B8D7;
+//    SysTick->LOAD = 0x0000B71A;
+	//SysTick->LOAD = 0x0000071A;
+	//SysTick->LOAD = 0x00000001;
     SysTick->CTRL &= ~0x00000004;
     SysTick->CTRL |= 0x00000003;
 }
