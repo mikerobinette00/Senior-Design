@@ -459,7 +459,7 @@ void init_tim3(void) {
 }
 
 //============================================================================
-// Varables for boxcar averaging.
+// Variables for boxcar averaging.
 //============================================================================
 #define BCSIZE 32
 float bcsum = 0;
@@ -568,7 +568,7 @@ void tim2_PWM(void) {
     TIM2 -> CCMR2 |= TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1;
 
     //Enable Output
-    TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+    //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     //Enable TIM2 Counter
     TIM2 -> CR1 |= TIM_CR1_CEN;
