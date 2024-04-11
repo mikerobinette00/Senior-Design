@@ -53,7 +53,7 @@ char *data_fields[] = {
 
 int motor_des_voltage = 0;
 int motor_des_speed = 0;
-
+int motor_max_speed = 0;
 int updated_value = 0;
 
 int live_speed_reading = 0;
@@ -79,6 +79,8 @@ char get_keypress(void);
  * rays functions for pwm and dma
  */
 void tim2_PWM(void);
+void tim17_DMA(void);
+void dma_mem_to_perhipheral(void);
 void spi1_setup_dma(void);
 void spi1_enable_dma(void);
 /*
@@ -107,9 +109,7 @@ void init_exti();
  * placeholder global variable for dma
  */
 int display[32];
-
-
-
+int ADC_array[32];
 
 void mysleep(void) {
     for(int n = 0; n < 1000; n++);
@@ -571,12 +571,30 @@ void tim2_PWM(void) {
     //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     //Enable TIM2 Counter
-    TIM2 -> CR1 |= TIM_CR1_CEN;
+    //TIM2 -> CR1 |= TIM_CR1_CEN;
 
-    //Determines the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
-    TIM2 -> CCR2 = 5;
-    TIM2 -> CCR3 = 2.5;
-    TIM2 -> CCR4 = 100;
+    // Logic to determine duty cycle (variables temporary)
+    float BV = 9;
+    float d_buck = 0;
+    float d_boost = 0;
+    float max_speed = 100; //User input max speed
+    float d_Hbridge = 0;
+
+    if (motor_des_voltage <= BV) {
+    	d_buck = 10 * (motor_des_voltage / BV);
+    	d_boost = 0;
+    }
+    else
+    {
+    	d_buck = 10;
+    	d_boost = 10 * (1 - (BV/motor_des_voltage));
+    }
+    d_Hbridge = 10 * (motor_des_speed / max_speed);
+
+    //Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
+    TIM2 -> CCR2 = d_Hbridge; //H Bridge
+    TIM2 -> CCR3 = d_boost; //Boost
+    TIM2 -> CCR4 = d_buck; //Buck
 }
 
 
@@ -667,4 +685,29 @@ void init_exti() {
     EXTI->RTSR |= EXTI_RTSR_TR8 | EXTI_RTSR_TR9;
     EXTI->IMR |= EXTI_IMR_MR8 | EXTI_IMR_MR9;
     NVIC->ISER[0] |= 0x000000E0;
+}
+
+//Timer for DMA currently set to 100kHz
+void tim17_DMA(void) {
+	RCC -> APB2ENR |= RCC_APB2ENR_TIM17EN;
+	TIM17 -> PSC = 47;
+	TIM17 -> ARR = 9;
+	TIM17 -> DIER |= TIM_DIER_UDE; //UDE triggers DMA requests UIE triggers interrupts
+	TIM17 -> CR1 |= TIM_CR1_CEN;
+}
+
+void dma_mem_to_perhipheral(void) {
+    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+    DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
+    ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
+    DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1->DR)); //Address of the peripheral register
+    DMA1_Channel1 -> CMAR = (uint32_t) (ADC_array); //Address of memory register
+    DMA1_Channel1 -> CNDTR = 32; //Size of the array being stored
+    DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
+    DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
+    DMA1_Channel1 -> CCR &= ~DMA_CCR_PINC; //Only used for memory to memory
+    DMA1_Channel1 -> CCR &= ~0x00000F00;  // clear Msize and psize
+    DMA1_Channel1 -> CCR |= 0x00000A00;  // 32 bits on msize and psize (1010)
+    DMA1_Channel1 -> CCR |= DMA_CCR_CIRC; //Enabling circular mode
+    DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enabling the DMA
 }
