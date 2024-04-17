@@ -39,7 +39,7 @@ uint16_t cursor_pos_row = 0;
 uint16_t cursor_pos_row_old = 0;
 uint16_t cursor_pos_col_old = 0;
 
-const int num_table_rows = 3;
+const int num_table_rows = 4;
 const int num_table_cols = 4;
 
 uint8_t row_inc = 0;
@@ -50,6 +50,7 @@ char keypresses[5] = {"00000"};
 
 char *data_fields[] = {
 		"Rated Motor Voltage", "", "", "00.00",
+		"Desired Motor Speed", "", "", "00000",
 		"Rated Motor Max RPM", "", "", "00000",
 		"Measured Motor RPM", "", "", "00000"
 };
@@ -57,9 +58,9 @@ char *data_fields[] = {
 bool enter_key_pressed = false;
 bool process_num_triggered = false;
 
-int motor_des_voltage = 0;
-int motor_des_speed = 0;
-int motor_max_speed = 0;
+float motor_des_voltage = 0;
+float motor_des_speed = 0;
+float motor_max_speed = 0;
 int updated_value = 0;
 
 int live_speed_reading = 0;
@@ -73,6 +74,7 @@ int8_t top_field_pos = 0;
 uint8_t bottom_field_pos = 0;
 
 
+bool pwm_enable = false;
 
 void init_display_fields(char *data_fields_arr[]);
 void update_display_field(char *updated_string);
@@ -95,6 +97,7 @@ char get_keypress(void);
  * rays functions for pwm and dma
  */
 void tim2_PWM(void);
+//void TIM2_IRQHandler();
 void tim17_DMA(void);
 void dma_mem_to_perhipheral(void);
 void spi1_setup_dma(void);
@@ -142,11 +145,11 @@ int main(void) {
 	bottom_field_pos = row_inc * (num_table_rows - 2);
 
 
-	NVIC_SetPriority(SysTick_IRQn, 0);
-	NVIC_SetPriority(TIM2_IRQn, 10);
-	NVIC_SetPriority(TIM3_IRQn, 10);
-	NVIC_SetPriority(TIM7_IRQn, 10);
-	NVIC_SetPriority(EXTI4_15_IRQn, 1);
+//	NVIC_SetPriority(SysTick_IRQn, 0);
+//	NVIC_SetPriority(TIM2_IRQn, 10);
+//	NVIC_SetPriority(TIM3_IRQn, 10);
+//	NVIC_SetPriority(TIM7_IRQn, 10);
+//	NVIC_SetPriority(EXTI4_15_IRQn, 1);
 
     init_pins();  // generic pin setup
 
@@ -221,8 +224,12 @@ void draw_cursor() {
 
 void erase_cursor() {
 //	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
-	LCD_DrawLine(col_inc * (num_table_cols - 1), 0 + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), 0 + font_size + 1, WHITE);
-	LCD_DrawLine(col_inc * (num_table_cols - 1), row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), row_inc + font_size + 1, WHITE);
+	//LCD_DrawLine(col_inc * (num_table_cols - 1), 0 + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), 0 + font_size + 1, WHITE);
+	//LCD_DrawLine(col_inc * (num_table_cols - 1), row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), row_inc + font_size + 1, WHITE);
+
+	for (int i = 0; i < num_table_rows - 1; i++) {
+		LCD_DrawLine(col_inc * (num_table_cols - 1), i*row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), i*row_inc + font_size + 1, WHITE);
+	}
 }
 
 
@@ -310,10 +317,24 @@ void process_keyPress(char key) {
 		else if((cursor_pos_row / row_inc) == 1) {
 			motor_des_speed = input_value;
 		}
+		else if((cursor_pos_row / row_inc) == 2) {
+			motor_max_speed = input_value;
+		}
+
 
 		for(int i = 0; i < num_digits; i++) {
 			keypresses[i] = '0';
 		}
+		break;
+	case '*':
+		if(pwm_enable) {
+			pwm_enable = false;
+		}
+		else {
+			pwm_enable = true;
+		}
+
+
 		break;
 	case '0':
 		process_num();
@@ -597,8 +618,8 @@ void tim2_PWM(void) {
 
     //Scaling the timer; Currently set to 100 kHz
     RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2 -> PSC = 47;
-    TIM2 -> ARR = 9;
+    TIM2 -> PSC = 0;  // 7
+    TIM2 -> ARR = 99;  // 9
 
     TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
     TIM2 -> CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
@@ -608,32 +629,29 @@ void tim2_PWM(void) {
     //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     //Enable TIM2 Counter
-    //TIM2 -> CR1 |= TIM_CR1_CEN;
+//    TIM2 -> DIER |= TIM_DIER_UIE;
+    TIM2 -> CR1 |= TIM_CR1_CEN;
+//    NVIC->ISER[0] |= 0xffffffff;
 
     // Logic to determine duty cycle (variables temporary)
-    float BV = 9;
-    float d_buck = 0;
-    float d_boost = 0;
-    float max_speed = 100; //User input max speed
-    float d_Hbridge = 0;
+    TIM2 -> CCR2 = 0; //H Bridge
+	TIM2 -> CCR3 = 0; //Boost
+	TIM2 -> CCR4 = 0; //Buck
 
-    if (motor_des_voltage <= BV) {
-    	d_buck = 10 * (motor_des_voltage / BV);
-    	d_boost = 0;
-    }
-    else
-    {
-    	d_buck = 10;
-    	d_boost = 10 * (1 - (BV/motor_des_voltage));
-    }
-    d_Hbridge = 10 * (motor_des_speed / max_speed);
-
-    //Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
-    TIM2 -> CCR2 = d_Hbridge; //H Bridge
-    TIM2 -> CCR3 = d_boost; //Boost
-    TIM2 -> CCR4 = d_buck; //Buck
 }
 
+
+//void TIM2_IRQHandler() {
+//	TIM2->SR = ~TIM_SR_UIF;
+//	//live_speed_reading += 1;
+//
+//	if(live_speed_reading >= 10000) {
+//		 live_speed_reading+=1;
+//	}
+//	else {
+//		live_speed_reading+=1;
+//	}
+//}
 
 
 /*
@@ -676,15 +694,15 @@ void TIM7_IRQHandler(){
  */
 void SysTick_Handler() {
 	char buffer[5];
-	// motor voltage
-	sprintf(buffer, "%d", motor_des_voltage);
-	LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
-	// motor speed
-	sprintf(buffer, "%d", motor_des_speed);
-	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
-	// adc reading for "motor speed"
+//	// motor voltage
+//	sprintf(buffer, "%d", motor_des_voltage);
+//	LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
+//	// motor speed
+//	sprintf(buffer, "%d", motor_des_speed);
+//	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
+//	// adc reading for "motor speed"
 	sprintf(buffer, "%3d", live_speed_reading);
-
+//
 	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
 
 
@@ -703,6 +721,49 @@ void SysTick_Handler() {
 		}
 		process_num_triggered = false;
 	}
+	if(pwm_enable == true) {
+		TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+		// Enable TIM2 Counter
+		TIM2 -> CR1 |= TIM_CR1_CEN;
+	}
+	else {
+		TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
+
+		// Enable TIM2 Counter
+		TIM2 -> CR1 &= ~TIM_CR1_CEN;
+	}
+
+	float temp_des_speed = motor_des_speed;
+	float temp_max_speed = motor_max_speed;
+	float temp_des_volt = motor_des_voltage;
+
+	float BV = 9;
+	float d_buck = 0;  // pin 17 on stm32f091rct6
+	float d_boost = 0;  // pin 16 on stm32f091rct6
+	float d_Hbridge = 0;  // pin 15 on stm32f091rct6
+
+	if (motor_des_voltage <= BV) {
+		d_buck = 100 * (motor_des_voltage / BV);
+		d_boost = 0;
+	}
+	else
+	{
+		d_buck = 100;
+		d_boost = 100 * (1 - (BV / motor_des_voltage));
+	}
+	d_Hbridge = 100 * (motor_des_speed / motor_max_speed);
+
+
+
+//	//Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
+//	TIM2 -> CCR2 = d_Hbridge; //H Bridge
+//	TIM2 -> CCR3 = d_boost; //Boost
+//	TIM2 -> CCR4 = d_buck; //Buck
+
+	TIM2 -> CCR2 = 25; //H Bridge
+	TIM2 -> CCR3 = 47; //Boost
+	TIM2 -> CCR4 = 92; //Buck
 
 	erase_cursor();
 	draw_cursor();
