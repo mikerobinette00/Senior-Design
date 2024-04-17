@@ -63,7 +63,7 @@ float motor_des_speed = 0;
 float motor_max_speed = 0;
 int updated_value = 0;
 
-int live_speed_reading = 0;
+float live_speed_reading = 0;
 
 
 
@@ -509,7 +509,7 @@ void init_tim3(void) {
 //    TIM2->PSC = 47999;
 //    TIM2->ARR = 99;
     // 1000 hz sampling rate
-	TIM3->PSC = 4799;
+	TIM3->PSC = 799;
 	TIM3->ARR = 9;
     TIM3->DIER |= TIM_DIER_UIE;
     TIM3->CR1 |= TIM_CR1_CEN;
@@ -542,9 +542,11 @@ void TIM3_IRQHandler(){
 //    bcn += 1;
 //    if (bcn >= BCSIZE)
 //        bcn = 0;
-    //live_speed_reading = bcsum / BCSIZE; // 2.95 * live_speed_reading / 4096 -> conversion to voltage
+//    float temp_live_speed_reading = bcsum/BCSIZE;
+    //live_speed_reading = 3.3 * temp_live_speed_reading / 4096; // -> conversion to voltage; bcsum / BCSIZE; //
 
-    float live_speed_reading_voltage = 2.95 * (ADC1->DR) / 4096;
+    float live_speed_reading_voltage = 3.3 * (ADC1->DR) / 4096;
+    //live_speed_reading = live_speed_reading_voltage;
     speed_counter += 1;
     if(live_speed_reading_voltage > 0.3) {
     	if(flipflop == 0) {
@@ -558,7 +560,10 @@ void TIM3_IRQHandler(){
 //				bcn = 0;
 //			}
 
-    		live_speed_reading = (1.0 / (speed_counter/1000.0)) * 60.0;
+    		// speed_reading / 1000 -> number of instances high in 1000 hz
+    		// 1 / (speed_reading / 1000) > hz
+    		// hz * 60 = rpm
+    		live_speed_reading = (1.0 / (speed_counter / 1000.0)) * 60; // rpm
 
 
     		speed_counter = 0;
@@ -566,6 +571,9 @@ void TIM3_IRQHandler(){
     	flipflop = 1;
     }
     else {
+    	if(speed_counter > 1000) {
+    		live_speed_reading = 0;
+    	}
     	flipflop = 0;
     }
 
@@ -694,16 +702,11 @@ void TIM7_IRQHandler(){
  */
 void SysTick_Handler() {
 	char buffer[5];
-//	// motor voltage
-//	sprintf(buffer, "%d", motor_des_voltage);
-//	LCD_DrawString(0, 320-16*3, BLACK, WHITE, buffer, font_size, 0);
-//	// motor speed
-//	sprintf(buffer, "%d", motor_des_speed);
-//	LCD_DrawString(0, 320-16*2, BLACK, WHITE, buffer, font_size, 0);
-//	// adc reading for "motor speed"
-	sprintf(buffer, "%3d", live_speed_reading);
+
+	// live speed rpm
+	sprintf(buffer, "%5.0f", live_speed_reading);
 //
-	LCD_DrawString(0, 320-16*1, BLACK, WHITE, buffer, font_size, 0);
+	LCD_DrawString((num_table_cols - 1) * col_inc, (num_table_rows - 1) * row_inc, BLACK, WHITE, buffer, font_size, 0);
 
 
 	if(enter_key_pressed) {
@@ -734,10 +737,6 @@ void SysTick_Handler() {
 		TIM2 -> CR1 &= ~TIM_CR1_CEN;
 	}
 
-	float temp_des_speed = motor_des_speed;
-	float temp_max_speed = motor_max_speed;
-	float temp_des_volt = motor_des_voltage;
-
 	float BV = 9;
 	float d_buck = 0;  // pin 17 on stm32f091rct6
 	float d_boost = 0;  // pin 16 on stm32f091rct6
@@ -757,13 +756,9 @@ void SysTick_Handler() {
 
 
 //	//Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
-//	TIM2 -> CCR2 = d_Hbridge; //H Bridge
-//	TIM2 -> CCR3 = d_boost; //Boost
-//	TIM2 -> CCR4 = d_buck; //Buck
-
-	TIM2 -> CCR2 = 25; //H Bridge
-	TIM2 -> CCR3 = 47; //Boost
-	TIM2 -> CCR4 = 92; //Buck
+	TIM2 -> CCR2 = d_Hbridge; //H Bridge
+	TIM2 -> CCR3 = d_boost; //Boost
+	TIM2 -> CCR4 = d_buck; //Buck
 
 	erase_cursor();
 	draw_cursor();
