@@ -626,7 +626,7 @@ void tim2_PWM(void) {
 
     //Scaling the timer; Currently set to 100 kHz
     RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2 -> PSC = 0;  // 7
+    TIM2 -> PSC = 1;  // 7
     TIM2 -> ARR = 99;  // 9
 
     TIM2 -> CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
