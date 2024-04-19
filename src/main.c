@@ -62,8 +62,9 @@ float motor_des_voltage = 0;
 float motor_des_speed = 0;
 float motor_max_speed = 0;
 int updated_value = 0;
-
+float motor_feedback = 0;
 float live_speed_reading = 0;
+bool motor_running = false;
 
 
 
@@ -164,7 +165,7 @@ int main(void) {
     setup_adc();  // adc loop
     init_tim3();  // timer for adc
 
-    //init_exti();  // external interrupts setup
+    init_exti();  // external interrupts setup
 
     /*
      * rays functions
@@ -409,8 +410,8 @@ void init_pins() {
     GPIOC->OTYPER |= 0x000000F0; // open drain PC4-7 (for keypad debouncing)
 
     // pull up resisters PC0-3
-    GPIOC->PUPDR &= ~0x000000ff;
-    GPIOC->PUPDR |= 0x00000055;
+    GPIOC->PUPDR &= ~0x000f00ff;
+    GPIOC->PUPDR |= 0x000A0055;
 }
 
 
@@ -548,7 +549,7 @@ void TIM3_IRQHandler(){
 			bcsum += boxcar[bcn] = (1.0 / (speed_counter / 1000.0)) * 60.0;
 			bcn += 1;
 			if (bcn >= BCSIZE) {
-				live_speed_reading = bcsum / BCSIZE;
+				motor_feedback = bcsum / BCSIZE;
 				bcn = 0;
 			}
 
@@ -563,8 +564,7 @@ void TIM3_IRQHandler(){
     }
     else {
     	if(speed_counter > 1000) {
-    		memset(boxcar, 0, sizeof(boxcar));
-    		live_speed_reading = 0;
+    		motor_feedback = 0;
     	}
     	flipflop = 0;
     }
@@ -700,6 +700,13 @@ void SysTick_Handler() {
 //
 	LCD_DrawString((num_table_cols - 1) * col_inc, (num_table_rows - 1) * row_inc, BLACK, WHITE, buffer, font_size, 0);
 
+	if(motor_running) {
+		LCD_DrawString(0, 320-16*1, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
+	}
+	else {
+		LCD_DrawString(0, 320-16*1, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
+	}
+
 
 	if(enter_key_pressed) {
 		update_display_field(keypresses);
@@ -755,11 +762,11 @@ void SysTick_Handler() {
 	erase_cursor();
 	draw_cursor();
 
-	uint32_t average_speed = 0;
-	for(int i = 0; i < sizeof(boxcar); i++) {
-		average_speed += boxcar[i];
-	}
-	live_speed_reading = average_speed / sizeof(boxcar);
+//	uint32_t average_speed = 0;
+//	for(int i = 0; i < sizeof(boxcar); i++) {
+//		average_speed += boxcar[i];
+//	}
+//	live_speed_reading = average_speed / sizeof(boxcar);
 }
 
 /**
@@ -784,12 +791,14 @@ void EXTI4_15_IRQHandler() {
     EXTI->PR |= EXTI_PR_PR8 | EXTI_PR_PR9;
 
     if(GPIOC->IDR & (0x1 << 8)) {  // start motor
-        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
-        //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+        motor_running = true;
+        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+        TIM2 -> CR1 |= TIM_CR1_CEN;
     }
     else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
-        LCD_DrawString(0, 320-16*4, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
-        //TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+        motor_running = false;
+        TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+        TIM2 -> CR1 &= ~TIM_CR1_CEN;
     }
 }
 
@@ -801,7 +810,7 @@ void init_exti() {
     SYSCFG->EXTICR[3] |= SYSCFG_EXTICR3_EXTI8_PC | SYSCFG_EXTICR3_EXTI9_PC;
     EXTI->RTSR |= EXTI_RTSR_TR8 | EXTI_RTSR_TR9;
     EXTI->IMR |= EXTI_IMR_MR8 | EXTI_IMR_MR9;
-    NVIC->ISER[0] |= 0x000000E0;
+    NVIC->ISER[0] |= 0xffffffff;
 }
 
 //Timer for DMA currently set to 1kHz
@@ -817,12 +826,12 @@ void setup_dma(void) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
     ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
-    DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1->DR)); //Address of the peripheral register
-    DMA1_Channel1 -> CMAR = (uint32_t) (&boxcar); //Address of memory register
-    DMA1_Channel1 -> CNDTR = 32; //Size of the array being stored
+    DMA1_Channel1 -> CPAR = (uint32_t) &motor_feedback; //Address of the peripheral register
+    DMA1_Channel1 -> CMAR = (uint32_t) &live_speed_reading; //Address of memory register
+    DMA1_Channel1 -> CNDTR = 1; //Size of the array being stored
     DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
     DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
-    DMA1_Channel1 -> CCR &= ~DMA_CCR_PINC; //Only used for memory to memory
+    DMA1_Channel1 -> CCR |= DMA_CCR_PINC; //Only used for memory to memory
     DMA1_Channel1 -> CCR &= ~0x00000F00;  // clear Msize and psize
     DMA1_Channel1 -> CCR |= 0x00000A00;  // 32 bits on msize and psize (1010)
     DMA1_Channel1 -> CCR |= DMA_CCR_CIRC; //Enabling circular mode
