@@ -97,11 +97,12 @@ char get_keypress(void);
  * rays functions for pwm and dma
  */
 void tim2_PWM(void);
-//void TIM2_IRQHandler();
+
+
+// dma code
 void tim17_DMA(void);
-void dma_mem_to_perhipheral(void);
-void spi1_setup_dma(void);
-void spi1_enable_dma(void);
+void setup_dma(void);
+void enable_dma(void);
 /*
  * end of rays functions
  */
@@ -163,14 +164,12 @@ int main(void) {
     setup_adc();  // adc loop
     init_tim3();  // timer for adc
 
-    init_exti();  // external interrupts setup
+    //init_exti();  // external interrupts setup
 
     /*
      * rays functions
      */
     tim2_PWM();  // pwm signal loop
-//    spi1_setup_dma();
-//    spi1_enable_dma();
     /*
      * end of rays functions
      */
@@ -181,8 +180,11 @@ int main(void) {
 
     init_display_fields(data_fields);
 
+    tim17_DMA();
+    setup_dma();
+    enable_dma();
 
-    //mysleep(1000);
+
     for(;;)
     {
     	pressed_key = get_keypress();
@@ -535,36 +537,25 @@ void TIM3_IRQHandler(){
     ADC1->CR |= ADC_CR_ADSTART;
     while(!(ADC1->ISR & ADC_ISR_EOC));
 
-
-
-//    bcsum -= boxcar[bcn];
-//    bcsum += boxcar[bcn] = ADC1->DR;
-//    bcn += 1;
-//    if (bcn >= BCSIZE)
-//        bcn = 0;
-//    float temp_live_speed_reading = bcsum/BCSIZE;
-    //live_speed_reading = 3.3 * temp_live_speed_reading / 4096; // -> conversion to voltage; bcsum / BCSIZE; //
-
     float live_speed_reading_voltage = 3.3 * (ADC1->DR) / 4096;
-    //live_speed_reading = live_speed_reading_voltage;
+
     speed_counter += 1;
     if(live_speed_reading_voltage > 0.3) {
     	if(flipflop == 0) {
     		// do speed calc
 
-//			bcsum -= boxcar[bcn];
-//			bcsum += boxcar[bcn] = (1.0 / (speed_counter/1000.0)) * 60.0;
-//			bcn += 1;
-//			if (bcn >= BCSIZE) {
-//				live_speed_reading = bcsum / BCSIZE;
-//				bcn = 0;
-//			}
+			bcsum -= boxcar[bcn];
+			bcsum += boxcar[bcn] = (1.0 / (speed_counter / 1000.0)) * 60.0;
+			bcn += 1;
+			if (bcn >= BCSIZE) {
+				live_speed_reading = bcsum / BCSIZE;
+				bcn = 0;
+			}
 
     		// speed_reading / 1000 -> number of instances high in 1000 hz
     		// 1 / (speed_reading / 1000) > hz
     		// hz * 60 = rpm
-    		live_speed_reading = (1.0 / (speed_counter / 1000.0)) * 60; // rpm
-
+    		// live_speed_reading = (1.0 / (speed_counter / 1000.0)) * 60; // rpm
 
     		speed_counter = 0;
     	}
@@ -572,6 +563,7 @@ void TIM3_IRQHandler(){
     }
     else {
     	if(speed_counter > 1000) {
+    		memset(boxcar, 0, sizeof(boxcar));
     		live_speed_reading = 0;
     	}
     	flipflop = 0;
@@ -762,6 +754,12 @@ void SysTick_Handler() {
 
 	erase_cursor();
 	draw_cursor();
+
+	uint32_t average_speed = 0;
+	for(int i = 0; i < sizeof(boxcar); i++) {
+		average_speed += boxcar[i];
+	}
+	live_speed_reading = average_speed / sizeof(boxcar);
 }
 
 /**
@@ -806,21 +804,21 @@ void init_exti() {
     NVIC->ISER[0] |= 0x000000E0;
 }
 
-//Timer for DMA currently set to 100kHz
+//Timer for DMA currently set to 1kHz
 void tim17_DMA(void) {
 	RCC -> APB2ENR |= RCC_APB2ENR_TIM17EN;
-	TIM17 -> PSC = 47;
+	TIM17 -> PSC = 799;
 	TIM17 -> ARR = 9;
 	TIM17 -> DIER |= TIM_DIER_UDE; //UDE triggers DMA requests UIE triggers interrupts
 	TIM17 -> CR1 |= TIM_CR1_CEN;
 }
 
-void dma_mem_to_perhipheral(void) {
+void setup_dma(void) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
     ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
     DMA1_Channel1 -> CPAR = (uint32_t) (&(ADC1->DR)); //Address of the peripheral register
-    DMA1_Channel1 -> CMAR = (uint32_t) (ADC_array); //Address of memory register
+    DMA1_Channel1 -> CMAR = (uint32_t) (&boxcar); //Address of memory register
     DMA1_Channel1 -> CNDTR = 32; //Size of the array being stored
     DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
     DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
@@ -828,5 +826,8 @@ void dma_mem_to_perhipheral(void) {
     DMA1_Channel1 -> CCR &= ~0x00000F00;  // clear Msize and psize
     DMA1_Channel1 -> CCR |= 0x00000A00;  // 32 bits on msize and psize (1010)
     DMA1_Channel1 -> CCR |= DMA_CCR_CIRC; //Enabling circular mode
-    DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enabling the DMA
+}
+
+void enable_dma(void) {
+	DMA1_Channel1 -> CCR |= DMA_CCR_EN; //Enabling the DMA
 }
