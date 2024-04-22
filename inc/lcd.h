@@ -41,6 +41,7 @@ extern lcd_dev_t lcddev;
 #define USE_HORIZONTAL       0
 #define USE_VERTICAL 1
 #define FLIPPED_USE_HORIZONTAL 2
+#define FLIPPED_USE_VERTICAL 3
 
 // The dimensions of the display.
 #define LCD_W 240

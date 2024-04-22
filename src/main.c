@@ -28,8 +28,8 @@ uint8_t num_char = 0;
 uint8_t col = 0;
 
 /* display block begin */
-const int pixel_col = 240;
-const int pixel_row = 320;
+const int pixel_col = 320;
+const int pixel_row = 240;
 
 const int font_size = 16;  // currently only sizes 12 and 16 supported
 const int num_digits = 5;
@@ -65,13 +65,15 @@ int updated_value = 0;
 float motor_feedback = 0;
 float live_speed_reading = 0;
 bool motor_running = false;
+bool initial_startup = true;
+bool voltage_too_high = false;
 
 
 
 
-uint8_t far_left_pos = 0;
-uint8_t far_right_pos = 0;
-int8_t top_field_pos = 0;
+uint16_t far_left_pos = 0;
+uint16_t far_right_pos = 0;
+uint8_t top_field_pos = 0;
 uint8_t bottom_field_pos = 0;
 
 
@@ -153,37 +155,33 @@ int main(void) {
 //	NVIC_SetPriority(TIM7_IRQn, 10);
 //	NVIC_SetPriority(EXTI4_15_IRQn, 1);
 
-    init_pins();  // generic pin setup
+	// generic pin setup
+    init_pins();
 
-    init_spi1();  // display setup
-    init_systick();  // display update loop
-
-
-    setup_tim7();  // keypad
-
-
+    // adc setup
     setup_adc();  // adc loop
     init_tim3();  // timer for adc
 
+    // start stop buttons setup
     init_exti();  // external interrupts setup
 
-    /*
-     * rays functions
-     */
+    // keypad setup
+    setup_tim7();
+
+    // PWM setup
     tim2_PWM();  // pwm signal loop
-    /*
-     * end of rays functions
-     */
 
-
-    LCD_Setup();  // function from lcd.c
-    LCD_Clear(0xFFFF);
-
-    init_display_fields(data_fields);
-
+    // DMA setup
     tim17_DMA();
     setup_dma();
     enable_dma();
+
+	// LCD setup
+    init_spi1();  // display setup
+	init_systick();  // display update loop
+
+	LCD_Setup();  // function from lcd.c
+	LCD_Clear(0xFFFF);
 
 
     for(;;)
@@ -226,10 +224,6 @@ void draw_cursor() {
 }
 
 void erase_cursor() {
-//	LCD_DrawLine(cursor_pos_col, cursor_pos_row + font_size + 1, cursor_pos_col + font_size / 2, cursor_pos_row + font_size + 1, WHITE);
-	//LCD_DrawLine(col_inc * (num_table_cols - 1), 0 + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), 0 + font_size + 1, WHITE);
-	//LCD_DrawLine(col_inc * (num_table_cols - 1), row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), row_inc + font_size + 1, WHITE);
-
 	for (int i = 0; i < num_table_rows - 1; i++) {
 		LCD_DrawLine(col_inc * (num_table_cols - 1), i*row_inc + font_size + 1, col_inc * (num_table_cols - 1) + (font_size / 2) * (num_digits), i*row_inc + font_size + 1, WHITE);
 	}
@@ -251,82 +245,78 @@ void process_keyPress(char key) {
 	 * D: stop motor
 	 */
 
-//	NVIC_DisableIRQ(TIM2_IRQn);
-//	NVIC_DisableIRQ(TIM7_IRQn);
-//	NVIC_DisableIRQ(SysTick_IRQn);
-
-
-
 	void process_num() {
 		if(pressed_key == '#') {
 			return;
 		}
 		keypresses[(cursor_pos_col - far_left_pos) / (font_size / 2)] = key;
 		process_num_triggered = true;
-//		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, key, font_size, 0);
-
 	}
 
 	switch(key) {
 	case 'A':  // up arrow
-		//erase_cursor();
 		if(cursor_pos_row > top_field_pos) {
 			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row -= row_inc;
 		}
-		//draw_cursor();
 		break;
 	case 'B':  // down arrow
-		//erase_cursor();
 		if(cursor_pos_row < bottom_field_pos) {
 			cursor_pos_row_old = cursor_pos_row;
 			cursor_pos_row += row_inc;
 		}
-		//draw_cursor();
 		break;
 	case 'C':  // left arrow
-		//erase_cursor();
 		if(cursor_pos_col > far_left_pos) {
 			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col -= font_size / 2;
+
+			if(cursor_pos_row == 0 && cursor_pos_col == far_left_pos + (font_size / 2) * 2) {
+				cursor_pos_col -= font_size / 2;
+				keypresses[2] = '.';
+			}
 		}
-		//draw_cursor();
 		break;
 	case 'D':  // right arrow
-		//erase_cursor();
 		if(cursor_pos_col < far_right_pos) {
 			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
 		}
-		//draw_cursor();
+		if(cursor_pos_row == 0 && cursor_pos_col == far_left_pos + (font_size / 2) * 2) {
+			cursor_pos_col += font_size / 2;
+			keypresses[2] = '.';
+		}
 		break;
 	case '#':  // enter value
-		//erase_cursor();
 		cursor_pos_col_old = cursor_pos_col;
 		cursor_pos_col = far_left_pos;
-		//draw_cursor();
 		enter_key_pressed = true;
-		//update_display_field(keypresses);
 
-		int input_value = 0;
-		int starting_power = 1;
-		for(int i = 0; i < num_digits; i++) {
-			input_value += (keypresses[i] - '0') * (10000 / starting_power);
-			starting_power *= 10;
-		}
+		int input_value_normal = 0;
+		float input_value_decimal = 0.0;
+		int starting_power_normal = 1;
+		float starting_power_decimal = 1.0;
 		if((cursor_pos_row / row_inc) == 0) {
-			motor_des_voltage = input_value;
+			for(int i = 0; i < num_digits; i++) {
+				input_value_decimal += (keypresses[i] - '0') * (10 / starting_power_decimal);
+				starting_power_decimal *= 10;
+				if(i == 1) {
+					i+=1;
+				}
+			}
+			motor_des_voltage = input_value_decimal;
 		}
-		else if((cursor_pos_row / row_inc) == 1) {
-			motor_des_speed = input_value;
-		}
-		else if((cursor_pos_row / row_inc) == 2) {
-			motor_max_speed = input_value;
-		}
-
-
-		for(int i = 0; i < num_digits; i++) {
-			keypresses[i] = '0';
+		else {
+			for(int i = 0; i < num_digits; i++) {
+				input_value_normal += (keypresses[i] - '0') * (10000 / starting_power_normal);
+				starting_power_normal *= 10;
+			}
+			if((cursor_pos_row / row_inc) == 1) {
+				motor_des_speed = input_value_normal;
+			}
+			else if((cursor_pos_row / row_inc) == 2) {
+				motor_max_speed = input_value_normal;
+			}
 		}
 		break;
 	case '*':
@@ -334,10 +324,9 @@ void process_keyPress(char key) {
 			pwm_enable = false;
 		}
 		else {
+			if(!voltage_too_high)
 			pwm_enable = true;
 		}
-
-
 		break;
 	case '0':
 		process_num();
@@ -374,9 +363,6 @@ void process_keyPress(char key) {
 
 	}
 
-//	NVIC_EnableIRQ(TIM2_IRQn);
-//	NVIC_EnableIRQ(TIM7_IRQn);
-//	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 
@@ -399,7 +385,7 @@ void init_pins() {
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     //GPIOB->MODER &= ~0x30C30000;
     //GPIOB->MODER |= 0x10410000;
-    GPIOB->MODER &= ~0x0003F000;
+    GPIOB->MODER &= ~0x00003F000;
     GPIOB->MODER |= 0x00015000;
 
     // settings GPIOC pins for keypad
@@ -410,8 +396,9 @@ void init_pins() {
     GPIOC->OTYPER |= 0x000000F0; // open drain PC4-7 (for keypad debouncing)
 
     // pull up resisters PC0-3
-    GPIOC->PUPDR &= ~0x000f00ff;
-    GPIOC->PUPDR |= 0x000A0055;
+    GPIOC->PUPDR &= ~0x000C00ff;
+//    GPIOC->PUPDR |= 0x000A0055;
+    GPIOC->PUPDR |= 0x00080055;
 }
 
 
@@ -522,7 +509,7 @@ void init_tim3(void) {
 //============================================================================
 // Variables for boxcar averaging.
 //============================================================================
-#define BCSIZE 32
+#define BCSIZE 1
 float bcsum = 0;
 float boxcar[BCSIZE];
 int bcn = 0;
@@ -540,16 +527,19 @@ void TIM3_IRQHandler(){
 
     float live_speed_reading_voltage = 3.3 * (ADC1->DR) / 4096;
 
-    speed_counter += 1;
+    speed_counter += 1.0;
     if(live_speed_reading_voltage > 0.3) {
     	if(flipflop == 0) {
     		// do speed calc
 
 			bcsum -= boxcar[bcn];
-			bcsum += boxcar[bcn] = (1.0 / (speed_counter / 1000.0)) * 60.0;
+			boxcar[bcn] = (1.0 / (speed_counter / 1000.0)) * 60.0;
+			bcsum += boxcar[bcn];
+
 			bcn += 1;
 			if (bcn >= BCSIZE) {
 				motor_feedback = bcsum / BCSIZE;
+				//live_speed_reading = bcsum / BCSIZE;
 				bcn = 0;
 			}
 
@@ -558,7 +548,7 @@ void TIM3_IRQHandler(){
     		// hz * 60 = rpm
     		// live_speed_reading = (1.0 / (speed_counter / 1000.0)) * 60; // rpm
 
-    		speed_counter = 0;
+    		speed_counter = 0.0;
     	}
     	flipflop = 1;
     }
@@ -570,26 +560,6 @@ void TIM3_IRQHandler(){
     }
 
 
-
-}
-
-
-//===========================================================================
-// Configure the proper DMA channel to be triggered by SPI1_TX.
-// Set the SPI1 peripheral to trigger a DMA when the transmitter is empty.
-//===========================================================================
-void spi1_setup_dma(void) {
-    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
-    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
-    DMA1_Channel3->CPAR = (uint32_t) (&(SPI1->DR));
-    DMA1_Channel3->CMAR = (uint32_t) &display;///////////////////////// address?
-    DMA1_Channel3->CNDTR = 34;
-    DMA1_Channel3->CCR |= DMA_CCR_DIR;
-    DMA1_Channel3->CCR |= DMA_CCR_MINC;
-    DMA1_Channel3->CCR &= ~DMA_CCR_PINC;
-    DMA1_Channel3->CCR &= ~0x00000F00;  // clear Msize and psize
-    DMA1_Channel3->CCR |= 0x00000500;  // 16 bits on msize and psize (0101)
-    DMA1_Channel3->CCR |= DMA_CCR_CIRC;
 
 }
 
@@ -629,9 +599,7 @@ void tim2_PWM(void) {
     //TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     //Enable TIM2 Counter
-//    TIM2 -> DIER |= TIM_DIER_UIE;
     TIM2 -> CR1 |= TIM_CR1_CEN;
-//    NVIC->ISER[0] |= 0xffffffff;
 
     // Logic to determine duty cycle (variables temporary)
     TIM2 -> CCR2 = 0; //H Bridge
@@ -639,19 +607,6 @@ void tim2_PWM(void) {
 	TIM2 -> CCR4 = 0; //Buck
 
 }
-
-
-//void TIM2_IRQHandler() {
-//	TIM2->SR = ~TIM_SR_UIF;
-//	//live_speed_reading += 1;
-//
-//	if(live_speed_reading >= 10000) {
-//		 live_speed_reading+=1;
-//	}
-//	else {
-//		live_speed_reading+=1;
-//	}
-//}
 
 
 /*
@@ -693,6 +648,11 @@ void TIM7_IRQHandler(){
  *
  */
 void SysTick_Handler() {
+	if(initial_startup) {
+		init_display_fields(data_fields);
+		initial_startup = false;
+	}
+
 	char buffer[5];
 
 	// live speed rpm
@@ -701,40 +661,67 @@ void SysTick_Handler() {
 	LCD_DrawString((num_table_cols - 1) * col_inc, (num_table_rows - 1) * row_inc, BLACK, WHITE, buffer, font_size, 0);
 
 	if(motor_running) {
-		LCD_DrawString(0, 320-16*1, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
+		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
 	}
 	else {
-		LCD_DrawString(0, 320-16*1, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
+		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR STOPPED", font_size, 0);
 	}
 
 
 	if(enter_key_pressed) {
+		if(cursor_pos_row == 0) {
+			keypresses[2] = '.';
+		}
 		update_display_field(keypresses);
+		for(int i = 0; i < num_digits; i++) {
+			keypresses[i] = '0';
+		}
+		if(cursor_pos_row < bottom_field_pos) {
+			cursor_pos_row_old = cursor_pos_row;
+			cursor_pos_row += row_inc;
+
+			cursor_pos_col_old = cursor_pos_col;
+			cursor_pos_col = far_left_pos;
+		}
+		else {
+			cursor_pos_row_old = cursor_pos_row;
+			cursor_pos_row = top_field_pos;
+
+			cursor_pos_col_old = cursor_pos_col;
+			cursor_pos_col = far_left_pos;
+		}
 		enter_key_pressed = false;
 	}
 	if(process_num_triggered && pressed_key != '#' && pressed_key != 'A' && pressed_key != 'B' && pressed_key != 'C' && pressed_key != 'D') {
 		LCD_DrawChar(cursor_pos_col, cursor_pos_row, WHITE, BLACK, pressed_key, font_size, 0);
 
 		if(cursor_pos_col < far_right_pos) {
-			//erase_cursor();
 			cursor_pos_col_old = cursor_pos_col;
 			cursor_pos_col += font_size / 2;
-			//draw_cursor();
+
+			if(cursor_pos_row == 0 && cursor_pos_col == far_left_pos + (font_size / 2) * 2) {
+				cursor_pos_col += font_size / 2;
+				keypresses[2] = '.';
+			}
 		}
 		process_num_triggered = false;
 	}
-	if(pwm_enable == true) {
-		TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
-
-		// Enable TIM2 Counter
-		TIM2 -> CR1 |= TIM_CR1_CEN;
-	}
-	else {
-		TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
-
-		// Enable TIM2 Counter
-		TIM2 -> CR1 &= ~TIM_CR1_CEN;
-	}
+//	if(pwm_enable == true) {
+//		TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+//
+//		// Enable TIM2 Counter
+//		TIM2 -> CR1 |= TIM_CR1_CEN;
+//
+//		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
+//	}
+//	else {
+//		TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
+//
+//		// Disable TIM2 Counter
+//		TIM2 -> CR1 &= ~TIM_CR1_CEN;
+//
+//		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR STOPPING", font_size, 0);
+//	}
 
 	float BV = 9;
 	float d_buck = 0;  // pin 17 on stm32f091rct6
@@ -744,29 +731,34 @@ void SysTick_Handler() {
 	if (motor_des_voltage <= BV) {
 		d_buck = 100 * (motor_des_voltage / BV);
 		d_boost = 0;
+		d_Hbridge = 100 * (motor_des_speed / motor_max_speed);
+		LCD_DrawString(0, 240-16*2, BLACK, WHITE, "                   ", font_size, 0);
+		voltage_too_high = false;
 	}
-	else
+	else if (motor_des_voltage <= 24)
 	{
 		d_buck = 100;
 		d_boost = 100 * (1 - (BV / motor_des_voltage));
+		d_Hbridge = 100 * (motor_des_speed / motor_max_speed);
+		LCD_DrawString(0, 240-16*2, BLACK, WHITE, "                  ", font_size, 0);
+		voltage_too_high = false;
 	}
-	d_Hbridge = 100 * (motor_des_speed / motor_max_speed);
+	else {
+		voltage_too_high = true;
+		d_buck = 0;
+		d_boost = 0;
+		d_Hbridge = 0;
+		LCD_DrawString(0, 240-16*2, BLACK, WHITE, "VOLTAGE TOO HIGH", font_size, 0);
+	}
 
 
-
-//	//Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
+	//Setting the duty cycle (Reloads at 9; CCR2 at 5 = ~50%)
 	TIM2 -> CCR2 = d_Hbridge; //H Bridge
 	TIM2 -> CCR3 = d_boost; //Boost
 	TIM2 -> CCR4 = d_buck; //Buck
 
 	erase_cursor();
 	draw_cursor();
-
-//	uint32_t average_speed = 0;
-//	for(int i = 0; i < sizeof(boxcar); i++) {
-//		average_speed += boxcar[i];
-//	}
-//	live_speed_reading = average_speed / sizeof(boxcar);
 }
 
 /**
@@ -788,17 +780,25 @@ void init_systick() {
 // EXTI Interrupt handler for pins 4-15
 // acknowledge interrupt on pins 8,9
 void EXTI4_15_IRQHandler() {
-    EXTI->PR |= EXTI_PR_PR8 | EXTI_PR_PR9;
+    //EXTI->PR |= EXTI_PR_PR8 | EXTI_PR_PR9;
+	EXTI->PR |= EXTI_PR_PR9;
 
-    if(GPIOC->IDR & (0x1 << 8)) {  // start motor
-        motor_running = true;
-        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
-        TIM2 -> CR1 |= TIM_CR1_CEN;
-    }
-    else if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
-        motor_running = false;
-        TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
-        TIM2 -> CR1 &= ~TIM_CR1_CEN;
+//    if(GPIOC->IDR & (0x1 << 8)) {  // start motor
+//        motor_running = true;
+//        TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+//        TIM2 -> CR1 |= TIM_CR1_CEN;
+//    }
+    if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
+        if(motor_running) {
+        	motor_running = false;
+			TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
+			TIM2 -> CR1 &= ~TIM_CR1_CEN;
+        }
+        else {
+        	motor_running = true;
+			TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
+			TIM2 -> CR1 |= TIM_CR1_CEN;
+        }
     }
 }
 
@@ -810,7 +810,7 @@ void init_exti() {
     SYSCFG->EXTICR[3] |= SYSCFG_EXTICR3_EXTI8_PC | SYSCFG_EXTICR3_EXTI9_PC;
     EXTI->RTSR |= EXTI_RTSR_TR8 | EXTI_RTSR_TR9;
     EXTI->IMR |= EXTI_IMR_MR8 | EXTI_IMR_MR9;
-    NVIC->ISER[0] |= 0xffffffff;
+    NVIC->ISER[0] |= 0x00000080;
 }
 
 //Timer for DMA currently set to 1kHz
@@ -825,13 +825,14 @@ void tim17_DMA(void) {
 void setup_dma(void) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1 -> CCR &= ~DMA_CCR_EN; //Disabling for edits
-    ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
-    DMA1_Channel1 -> CPAR = (uint32_t) &motor_feedback; //Address of the peripheral register
-    DMA1_Channel1 -> CMAR = (uint32_t) &live_speed_reading; //Address of memory register
+    //ADC1 -> CFGR1 |= ADC_CFGR1_DMAEN;
+    DMA1_Channel1 -> CPAR = (uint32_t) &live_speed_reading; //Address of the peripheral register
+    DMA1_Channel1 -> CMAR = (uint32_t) &motor_feedback; //Address of memory register
     DMA1_Channel1 -> CNDTR = 1; //Size of the array being stored
     DMA1_Channel1 -> CCR |= DMA_CCR_DIR; //Copy from memory to peripheral
     DMA1_Channel1 -> CCR |= DMA_CCR_MINC; //Incrementing every transfer
     DMA1_Channel1 -> CCR |= DMA_CCR_PINC; //Only used for memory to memory
+    DMA1_Channel1 -> CCR |= DMA_CCR_MEM2MEM;
     DMA1_Channel1 -> CCR &= ~0x00000F00;  // clear Msize and psize
     DMA1_Channel1 -> CCR |= 0x00000A00;  // 32 bits on msize and psize (1010)
     DMA1_Channel1 -> CCR |= DMA_CCR_CIRC; //Enabling circular mode
