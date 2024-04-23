@@ -149,11 +149,11 @@ int main(void) {
 	bottom_field_pos = row_inc * (num_table_rows - 2);
 
 
-//	NVIC_SetPriority(SysTick_IRQn, 0);
-//	NVIC_SetPriority(TIM2_IRQn, 10);
-//	NVIC_SetPriority(TIM3_IRQn, 10);
-//	NVIC_SetPriority(TIM7_IRQn, 10);
-//	NVIC_SetPriority(EXTI4_15_IRQn, 1);
+	NVIC_SetPriority(SysTick_IRQn, 20);
+	NVIC_SetPriority(TIM2_IRQn, 40);
+	NVIC_SetPriority(TIM3_IRQn, 40);
+	NVIC_SetPriority(TIM7_IRQn, 40);
+	NVIC_SetPriority(EXTI4_15_IRQn, 10);
 
 	// generic pin setup
     init_pins();
@@ -320,12 +320,15 @@ void process_keyPress(char key) {
 		}
 		break;
 	case '*':
-		if(pwm_enable) {
+		if(motor_running || pwm_enable) {
+			motor_running = false;
 			pwm_enable = false;
 		}
 		else {
-			if(!voltage_too_high)
-			pwm_enable = true;
+			if(!voltage_too_high) {
+				pwm_enable = true;
+				motor_running = true;
+			}
 		}
 		break;
 	case '0':
@@ -555,6 +558,7 @@ void TIM3_IRQHandler(){
     else {
     	if(speed_counter > 1000) {
     		motor_feedback = 0;
+    		live_speed_reading = 0;
     	}
     	flipflop = 0;
     }
@@ -706,22 +710,25 @@ void SysTick_Handler() {
 		}
 		process_num_triggered = false;
 	}
-//	if(pwm_enable == true) {
-//		TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
-//
-//		// Enable TIM2 Counter
-//		TIM2 -> CR1 |= TIM_CR1_CEN;
-//
-//		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR RUNNING", font_size, 0);
-//	}
-//	else {
-//		TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
-//
-//		// Disable TIM2 Counter
-//		TIM2 -> CR1 &= ~TIM_CR1_CEN;
-//
-//		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR STOPPING", font_size, 0);
-//	}
+	if(pwm_enable == true) {
+		TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+
+		// Enable TIM2 Counter
+		TIM2 -> CR1 |= TIM_CR1_CEN;
+
+		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR RUNNING ", font_size, 0);
+	}
+	else {
+		TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
+
+		// Disable TIM2 Counter
+		TIM2 -> CR1 &= ~TIM_CR1_CEN;
+
+//		live_speed_reading = 0;
+//		motor_feedback = 0;
+
+		LCD_DrawString(0, 240-16*1, BLACK, WHITE, "MOTOR STOPPING", font_size, 0);
+	}
 
 	float BV = 9;
 	float d_buck = 0;  // pin 17 on stm32f091rct6
@@ -799,6 +806,7 @@ void EXTI4_15_IRQHandler() {
 			TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
 			TIM2 -> CR1 |= TIM_CR1_CEN;
         }
+        mysleep(50);
     }
 }
 
