@@ -798,11 +798,13 @@ void EXTI4_15_IRQHandler() {
     if(GPIOC->IDR & (0x1 << 9)) {  // stop motor
         if(motor_running) {
         	motor_running = false;
+        	pwm_enable = false;
 			TIM2 -> CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);  // stop pwm signal coming out
 			TIM2 -> CR1 &= ~TIM_CR1_CEN;
         }
         else {
         	motor_running = true;
+        	pwm_enable = true;
 			TIM2 -> CCER |= TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;  // start pwm signal coming out
 			TIM2 -> CR1 |= TIM_CR1_CEN;
         }
